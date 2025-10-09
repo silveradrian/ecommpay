@@ -28,20 +28,6 @@ class Config:
     CUSTOMGPT_BASE_URL = os.environ.get('CUSTOMGPT_BASE_URL', 'https://app.customgpt.ai/api/v1')
     CUSTOMGPT_EMBED_URL = 'https://cdn.customgpt.ai/js/embed.js'
     
-    # CRM Integration settings
-    CRM_API_URL = os.environ.get('CRM_API_URL')
-    CRM_API_KEY = os.environ.get('CRM_API_KEY')
-    
-    # Database settings
-    DATABASE_URL = os.environ.get('DATABASE_URL') or f'sqlite:///{BASE_DIR}/savi.db'
-    
-    # Redis settings (for session storage)
-    REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
-    
-    # File upload settings
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
-    UPLOAD_FOLDER = BASE_DIR / 'uploads'
-    
     # Logging settings
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
     LOG_FILE = os.environ.get('LOG_FILE', 'logs/savi.log')
