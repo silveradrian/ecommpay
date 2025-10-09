@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  savi-app:
+    build: .
+    container_name: savi-customgpt-app
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - SECRET_KEY=savi-dev-key-change-in-production
+    volumes:
+      # Mount source code for development (hot reload)
+      - .:/app
+      # Mount static files
+      - ./static:/app/static
+      # Mount templates
+      - ./templates:/app/templates
+    restart: unless-stopped
+    networks:
+      - savi-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add Redis for session storage (for production scaling)
+  redis:
+    image: redis:7-alpine
+    container_name: savi-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - savi-network
+    command: redis-server --appendonly yes
+
+networks:
+  savi-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local

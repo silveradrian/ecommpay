@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+
+{% block title %}Savi Chat - CustomGPT Testing{% endblock %}
+
+{% block head %}
+<style>
+    .chat-container {
+        height: calc(100vh - 200px);
+        min-height: 600px;
+    }
+    
+    .chat-messages {
+        height: 100%;
+    }
+    
+    /* CustomGPT Embed Styling */
+    #customgpt_chat {
+        height: 100%;
+        min-height: 500px;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    /* Override CustomGPT styles to match Savi theme */
+    #customgpt_chat iframe {
+        border-radius: 8px !important;
+        border: none !important;
+    }
+    
+    /* Custom styling for embedded chat */
+    .customgpt-container {
+        background: transparent !important;
+    }
+    
+    /* Loading animation for CustomGPT */
+    .customgpt-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 200px;
+        color: white;
+        opacity: 0.8;
+    }
+    
+    .loading-beam {
+        background: linear-gradient(90deg, transparent 0%, #FF6A00 50%, transparent 100%);
+        animation: loading-beam 2s linear infinite;
+        height: 2px;
+        width: 100px;
+        border-radius: 1px;
+    }
+    
+    @keyframes loading-beam {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    
+    <!-- Chat Header -->
+    <div class="bg-black bg-opacity-30 rounded-lg border border-white border-opacity-20 mb-6">
+        <div class="p-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="pulse-glow p-3 rounded-full bg-black bg-opacity-30">
+                        <img src="/static/images/Savi_logo_Savi_Colour reversed.png" alt="Savi" class="h-8 w-auto">
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-display font-bold text-white">
+                            Chat with <span class="savi-gradient bg-clip-text text-transparent">Savi</span>
+                        </h1>
+                        <p class="text-white opacity-80">CustomGPT Testing Interface • Session: {{ session_id[:8] }}</p>
+                    </div>
+                </div>
+                
+                <!-- Chat Controls -->
+                <div class="flex items-center space-x-2">
+                    <button onclick="clearChat()" class="px-4 py-2 bg-white bg-opacity-10 text-white text-sm rounded-lg hover:bg-opacity-20 transition-colors">
+                        Clear Chat
+                    </button>
+                    <button onclick="exportChat()" class="px-4 py-2 savi-gradient text-white text-sm rounded-lg hover:opacity-90 transition-opacity">
+                        Export
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Chat Interface -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        <!-- Chat Area -->
+        <div class="lg:col-span-3">
+            <div class="bg-black bg-opacity-30 rounded-lg border border-white border-opacity-20 chat-container">
+                
+                <!-- CustomGPT Chat Embed Area -->
+                <div class="chat-messages p-6 h-full" id="chat-container">
+                    
+                    <!-- Welcome Header -->
+                    <div class="mb-4 text-center">
+                        <div class="flex justify-center mb-3">
+                            <div class="pulse-glow p-3 rounded-full bg-black bg-opacity-30">
+                                <img src="/static/images/Savi_logo_Savi_Colour reversed.png" alt="Savi" class="h-8 w-auto">
+                            </div>
+                        </div>
+                        <p class="text-white opacity-90 text-sm">Hey there 👋 I'm Savi — here to make payments make sense.</p>
+                    </div>
+                    
+                    <!-- CustomGPT Embed Container -->
+                    <div class="h-full bg-black bg-opacity-20 rounded-lg border border-white border-opacity-10 p-4">
+                        <div id="customgpt_chat" class="h-full"></div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="lg:col-span-1">
+            
+            <!-- CRM Integration Panel -->
+            <div class="bg-black bg-opacity-30 rounded-lg border border-white border-opacity-20 mb-6">
+                <div class="p-4 border-b border-white border-opacity-20">
+                    <h3 class="font-display font-semibold text-white">CRM Integration</h3>
+                </div>
+                <div class="p-4 space-y-4">
+                    <div>
+                        <label class="text-sm text-white opacity-80">Active Contact</label>
+                        <select id="active-contact" onchange="setActiveContact()" class="w-full mt-1 px-3 py-2 bg-white bg-opacity-10 border border-white border-opacity-30 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-opacity-50">
+                            <option value="">Select Contact...</option>
+                        </select>
+                    </div>
+                    
+                    <div id="contact-info" class="hidden">
+                        <div class="p-3 bg-white bg-opacity-5 rounded-lg">
+                            <div class="text-sm text-white opacity-80">Contact Details</div>
+                            <div id="contact-details" class="mt-2 text-sm text-white"></div>
+                        </div>
+                    </div>
+                    
+                    <button onclick="refreshCRMData()" class="w-full px-4 py-2 savi-gradient text-white text-sm rounded-lg hover:opacity-90 transition-opacity">
+                        Refresh CRM Data
+                    </button>
+                </div>
+            </div>
+            
+            <!-- CustomGPT Settings -->
+            <div class="bg-black bg-opacity-30 rounded-lg border border-white border-opacity-20 mb-6">
+                <div class="p-4 border-b border-white border-opacity-20">
+                    <h3 class="font-display font-semibold text-white">CustomGPT Settings</h3>
+                </div>
+                <div class="p-4 space-y-4">
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-white opacity-80">Project ID</span>
+                            <span class="text-white font-mono">{{ config.CUSTOMGPT_PROJECT_ID }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-white opacity-80">Embed Status</span>
+                            <span class="text-green-400" id="embed-status">Loading...</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-white opacity-80">CRM Context</span>
+                            <span class="text-white" id="crm-context-status">Disabled</span>
+                        </div>
+                    </div>
+                    
+                    <button onclick="reinitializeChat()" class="w-full px-4 py-2 savi-gradient text-white text-sm rounded-lg hover:opacity-90 transition-opacity">
+                        Reinitialize Chat
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Session Info -->
+            <div class="bg-black bg-opacity-30 rounded-lg border border-white border-opacity-20">
+                <div class="p-4 border-b border-white border-opacity-20">
+                    <h3 class="font-display font-semibold text-white">Session Info</h3>
+                </div>
+                <div class="p-4 space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-white opacity-80">Messages</span>
+                        <span class="text-white" id="message-count">1</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-white opacity-80">Started</span>
+                        <span class="text-white" id="session-start">Just now</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-white opacity-80">Status</span>
+                        <span class="text-green-400">Active</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- CustomGPT Embed Script -->
+<script src="https://cdn.customgpt.ai/js/embed.js" 
+        defer 
+        div_id="customgpt_chat" 
+        p_id="{{ config.CUSTOMGPT_PROJECT_ID }}" 
+        p_key="{{ config.CUSTOMGPT_PROJECT_KEY }}">
+</script>
+
+<script>
+    let messageCount = 0;
+    let activeContactId = null;
+    let chatHistory = [];
+    let customGPTLoaded = false;
+    
+    // Initialize chat
+    document.addEventListener('DOMContentLoaded', function() {
+        loadCRMContacts();
+        document.getElementById('session-start').textContent = new Date().toLocaleTimeString();
+        
+        // Monitor CustomGPT loading
+        monitorCustomGPTLoad();
+        
+        // Set up CRM context integration
+        setupCRMIntegration();
+    });
+    
+    // Monitor CustomGPT loading status
+    function monitorCustomGPTLoad() {
+        const checkInterval = setInterval(() => {
+            const chatDiv = document.getElementById('customgpt_chat');
+            const iframe = chatDiv.querySelector('iframe');
+            
+            if (iframe) {
+                customGPTLoaded = true;
+                document.getElementById('embed-status').textContent = 'Active';
+                document.getElementById('embed-status').className = 'text-green-400';
+                clearInterval(checkInterval);
+                
+                // Update message count when CustomGPT is ready
+                updateMessageCount();
+                
+                Savi.showNotification('CustomGPT chatbot loaded successfully!', 'success');
+            }
+        }, 1000);
+        
+        // Timeout after 30 seconds
+        setTimeout(() => {
+            if (!customGPTLoaded) {
+                clearInterval(checkInterval);
+                document.getElementById('embed-status').textContent = 'Failed';
+                document.getElementById('embed-status').className = 'text-red-400';
+                Savi.showNotification('Failed to load CustomGPT chatbot', 'error');
+            }
+        }, 30000);
+    }
+    
+    // Set up CRM integration with CustomGPT
+    function setupCRMIntegration() {
+        // Listen for contact selection changes
+        const contactSelect = document.getElementById('active-contact');
+        contactSelect.addEventListener('change', function() {
+            if (activeContactId) {
+                document.getElementById('crm-context-status').textContent = 'Active';
+                document.getElementById('crm-context-status').className = 'text-green-400';
+                
+                // Log context switch
+                Savi.logInteraction('context_switch', `Switched to contact: ${activeContactId}`, activeContactId);
+            } else {
+                document.getElementById('crm-context-status').textContent = 'Disabled';
+                document.getElementById('crm-context-status').className = 'text-white';
+            }
+        });
+    }
+    
+    // Clear chat function - reinitialize CustomGPT
+    function clearChat() {
+        if (confirm('Are you sure you want to clear the chat and start fresh?')) {
+            reinitializeChat();
+            chatHistory = [];
+            messageCount = 0;
+            updateMessageCount();
+            Savi.showNotification('Chat cleared and reinitialized!', 'success');
+        }
+    }
+    
+    // Reinitialize CustomGPT embed
+    function reinitializeChat() {
+        const chatContainer = document.getElementById('customgpt_chat');
+        
+        // Show loading state
+        chatContainer.innerHTML = `
+            <div class="customgpt-loading">
+                <div class="text-center">
+                    <div class="loading-beam mb-4"></div>
+                    <p>Reinitializing CustomGPT...</p>
+                </div>
+            </div>
+        `;
+        
+        // Reset status
+        customGPTLoaded = false;
+        document.getElementById('embed-status').textContent = 'Loading...';
+        document.getElementById('embed-status').className = 'text-yellow-400';
+        
+        // Reload the embed script
+        setTimeout(() => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.customgpt.ai/js/embed.js';
+            script.defer = true;
+            script.setAttribute('div_id', 'customgpt_chat');
+            script.setAttribute('p_id', '{{ config.CUSTOMGPT_PROJECT_ID }}');
+            script.setAttribute('p_key', '{{ config.CUSTOMGPT_PROJECT_KEY }}');
+            
+            // Remove existing script and add new one
+            const existingScript = document.querySelector('script[src*="customgpt.ai"]');
+            if (existingScript) {
+                existingScript.remove();
+            }
+            
+            document.head.appendChild(script);
+            
+            // Re-monitor loading
+            monitorCustomGPTLoad();
+        }, 1000);
+    }
+    
+    // Export chat function - get data from CustomGPT if possible
+    function exportChat() {
+        const exportData = {
+            sessionId: '{{ session_id }}',
+            timestamp: new Date().toISOString(),
+            messageCount: messageCount,
+            activeContact: activeContactId,
+            customGPTStatus: customGPTLoaded ? 'loaded' : 'not loaded',
+            projectId: '{{ config.CUSTOMGPT_PROJECT_ID }}',
+            chatHistory: chatHistory // CRM interaction history
+        };
+        
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `savi-customgpt-export-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        Savi.showNotification('Session data exported successfully!', 'success');
+    }
+    
+    // Update message count (approximate based on interactions)
+    function updateMessageCount() {
+        messageCount++;
+        document.getElementById('message-count').textContent = messageCount;
+    }
+    
+    async function loadCRMContacts() {
+        try {
+            const response = await fetch('/api/crm/contacts');
+            const data = await response.json();
+            
+            if (data.success) {
+                const select = document.getElementById('active-contact');
+                select.innerHTML = '<option value="">Select Contact...</option>';
+                
+                data.data.forEach(contact => {
+                    const option = document.createElement('option');
+                    option.value = contact.id;
+                    option.textContent = `${contact.name} (${contact.company})`;
+                    select.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error loading CRM contacts:', error);
+            Savi.showNotification('Failed to load CRM contacts', 'error');
+        }
+    }
+    
+    function setActiveContact() {
+        const select = document.getElementById('active-contact');
+        activeContactId = select.value;
+        
+        if (activeContactId) {
+            loadContactDetails(activeContactId);
+            document.getElementById('contact-info').classList.remove('hidden');
+            
+            // Update CRM context status
+            document.getElementById('crm-context-status').textContent = 'Active';
+            document.getElementById('crm-context-status').className = 'text-green-400';
+            
+            // Log the context change
+            Savi.logInteraction('crm_context_set', `Active contact set to ID: ${activeContactId}`, activeContactId);
+        } else {
+            document.getElementById('contact-info').classList.add('hidden');
+            document.getElementById('crm-context-status').textContent = 'Disabled';
+            document.getElementById('crm-context-status').className = 'text-white';
+        }
+    }
+    
+    async function loadContactDetails(contactId) {
+        try {
+            const response = await fetch(`/api/crm/contacts/${contactId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                const contact = data.data;
+                document.getElementById('contact-details').innerHTML = `
+                    <div><strong>${contact.name}</strong></div>
+                    <div class="opacity-80">${contact.company}</div>
+                    <div class="opacity-80">${contact.email}</div>
+                    <div class="opacity-80">Status: ${contact.status}</div>
+                `;
+                
+                // Update chat history with contact context
+                chatHistory.push({
+                    type: 'contact_loaded',
+                    contact: contact,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        } catch (error) {
+            console.error('Error loading contact details:', error);
+            Savi.showNotification('Failed to load contact details', 'error');
+        }
+    }
+    
+    function refreshCRMData() {
+        loadCRMContacts();
+        if (activeContactId) {
+            loadContactDetails(activeContactId);
+        }
+        Savi.showNotification('CRM data refreshed!', 'success');
+    }
+</script>
+{% endblock %}
