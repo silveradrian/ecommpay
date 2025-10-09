@@ -5,12 +5,8 @@
 {% block head %}
 <style>
     .chat-container {
-        height: calc(100vh - 200px);
+        height: calc(100vh - 120px);
         min-height: 600px;
-    }
-    
-    .chat-messages {
-        height: 100%;
     }
     
     /* CustomGPT Embed Styling */
@@ -58,49 +54,31 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+<div class="w-full h-full">
     
-    <!-- Chat Header -->
-    <div class="bg-black bg-opacity-30 rounded-lg border border-white border-opacity-20 mb-6">
-        <div class="p-6 text-center">
-            <div class="flex justify-center mb-4">
-                <div class="pulse-glow p-4 rounded-full bg-black bg-opacity-30">
-                    <img src="/static/images/Savi_logo_Savi_White out copy.png" alt="Savi" class="h-12 w-auto">
-                </div>
-            </div>
-            <h1 class="text-3xl md:text-4xl font-display font-bold text-white mb-2">
+    <!-- Minimal Header -->
+    <div class="text-center py-4 px-4">
+        <div class="flex justify-center items-center space-x-3 mb-2">
+            <img src="/static/images/Savi_logo_Savi_White out copy.png" alt="Savi" class="h-8 w-auto">
+            <h1 class="text-2xl font-display font-bold text-white">
                 Chat with <span class="savi-gradient bg-clip-text text-transparent">Savi</span>
             </h1>
-            <p class="text-white opacity-80">Your supportive digital companion for payments</p>
         </div>
     </div>
     
-    <!-- Main Chat Interface -->
-    <div class="bg-black bg-opacity-30 rounded-lg border border-white border-opacity-20 chat-container">
-        
-        <!-- CustomGPT Chat Embed Area -->
-        <div class="chat-messages p-6 h-full" id="chat-container">
-            
-            <!-- Welcome Message -->
-            <div class="mb-4 text-center">
-                <p class="text-white opacity-90 text-sm mb-4">Hey there 👋 I'm Savi — here to make payments make sense.</p>
-            </div>
-            
-            <!-- CustomGPT Embed Container -->
-            <div class="h-full bg-black bg-opacity-20 rounded-lg border border-white border-opacity-10 p-4">
-                <div id="customgpt_chat" class="h-full">
-                    <!-- Loading state -->
-                    <div class="customgpt-loading">
-                        <div class="text-center">
-                            <div class="loading-beam mb-4"></div>
-                            <p>Loading CustomGPT...</p>
-                        </div>
-                    </div>
+    <!-- Full-Width CustomGPT Chat Interface -->
+    <div class="w-full chat-container px-4">
+        <div id="customgpt_chat" class="h-full w-full">
+            <!-- Loading state -->
+            <div class="customgpt-loading">
+                <div class="text-center">
+                    <div class="loading-beam mb-4"></div>
+                    <p>Loading CustomGPT...</p>
                 </div>
             </div>
-            
         </div>
     </div>
+    
 </div>
 {% endblock %}
 
@@ -158,4 +136,5 @@
         }, 30000);
     }
 </script>
+{% endblock %}
 {% endblock %}
