@@ -262,14 +262,17 @@
                             <!-- Right Column - Live Preview -->
                             <div>
                                 <h3 class="text-lg font-semibold mb-3">Live Preview:</h3>
-                                <div id="customgpt_embed" class="border border-gray-600 rounded-lg">
-                                    <div class="flex items-center justify-center h-full">
-                                        <div class="text-center">
-                                            <div class="loading-beam mb-4"></div>
-                                            <p>Loading Embedded Chat...</p>
-                                        </div>
-                                    </div>
+                                <div class="border border-gray-600 rounded-lg overflow-hidden" style="height: 600px;">
+                                    <iframe 
+                                        src="static.html" 
+                                        class="w-full h-full"
+                                        title="Embedded Chat Preview"
+                                        style="border: none;">
+                                    </iframe>
                                 </div>
+                                <p class="text-sm text-gray-400 mt-2 text-center">
+                                    <a href="static.html" target="_blank" class="underline hover:text-white">Open in new tab ↗</a>
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -428,21 +431,11 @@
             document.getElementById('embedded-content').classList.toggle('hidden', tab !== 'embedded');
             document.getElementById('livechat-content').classList.toggle('hidden', tab !== 'livechat');
             
-            // Load embedded chat when tab is shown
-            if (tab === 'embedded' && !document.querySelector('#customgpt_embed iframe')) {
-                loadEmbeddedChat();
-            }
+            // Embedded chat is loaded via iframe, no dynamic loading needed
         }
         
         function loadEmbeddedChat() {
-            // Create and append the embed script
-            const script = document.createElement('script');
-            script.src = 'https://cdn.customgpt.ai/js/embed.js';
-            script.defer = true;
-            script.setAttribute('div_id', 'customgpt_embed');
-            script.setAttribute('p_id', '82753');
-            script.setAttribute('p_key', 'ea4e59faa461427ca9e80161e2de77c0');
-            document.body.appendChild(script);
+            // Embedded chat is now loaded via iframe, no dynamic loading needed
         }
         
         function toggleLiveChat() {
