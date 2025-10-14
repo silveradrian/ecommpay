@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Savi - Your supportive digital companion for payments">
+    <title>Savi - CustomGPT Chat</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts - Poppins & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <style>
+        /* Savi Design System Tokens */
+        :root {
+            --savi-bg: #0F2B1D;
+            --savi-gradient-start: #C137A2;
+            --savi-gradient-end: #FF6A00;
+            --savi-white: #FFFFFF;
+            --savi-black: #000000;
+            --savi-accent: #A020F0;
+        }
+        
+        .font-display { font-family: 'Poppins', sans-serif; }
+        .font-body { font-family: 'Inter', sans-serif; }
+        
+        .savi-bg { background-color: var(--savi-bg); }
+        .savi-gradient { background: linear-gradient(180deg, #C137A2 0%, #FF6A00 100%); }
+        .savi-gradient-r { background: linear-gradient(90deg, #C137A2 0%, #FF6A00 100%); }
+        
+        .savi-backdrop {
+            background-image: url('./static/images/Savi_Backgrounds_Savi_Background 5.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        
+        .chat-container {
+            height: calc(100vh - 120px);
+            min-height: 600px;
+        }
+        
+        /* CustomGPT Embed Styling */
+        #customgpt_chat {
+            height: 100%;
+            min-height: 500px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        /* Override CustomGPT styles to match Savi theme */
+        #customgpt_chat iframe {
+            border-radius: 8px !important;
+            border: none !important;
+        }
+        
+        /* Loading animation for CustomGPT */
+        .customgpt-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: white;
+            opacity: 0.8;
+        }
+        
+        .loading-beam {
+            background: linear-gradient(90deg, transparent 0%, #FF6A00 50%, transparent 100%);
+            animation: loading-beam 2s linear infinite;
+            height: 2px;
+            width: 100px;
+            border-radius: 1px;
+        }
+        
+        @keyframes loading-beam {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+    </style>
+</head>
+<body class="h-full savi-bg text-white font-body">
+    <!-- Background wrapper -->
+    <div class="min-h-full savi-backdrop">
+        <div class="min-h-full bg-black bg-opacity-40">
+            
+            <!-- Main Content -->
+            <main class="min-h-screen">
+                <div class="w-full h-full">
+                    
+                    <!-- Minimal Header -->
+                    <div class="text-center py-4 px-4">
+                        <div class="flex justify-center items-center space-x-3 mb-2">
+                            <img src="./static/images/Savi_logo_Savi_White out copy.png" alt="Savi" class="h-8 w-auto">
+                            <h1 class="text-2xl font-display font-bold text-white">
+                                Chat with <span class="savi-gradient bg-clip-text text-transparent">Savi</span>
+                            </h1>
+                        </div>
+                    </div>
+                    
+                    <!-- Full-Width CustomGPT Chat Interface -->
+                    <div class="w-full chat-container px-4">
+                        <div id="customgpt_chat" class="h-full w-full">
+                            <!-- Loading state -->
+                            <div class="customgpt-loading">
+                                <div class="text-center">
+                                    <div class="loading-beam mb-4"></div>
+                                    <p>Loading CustomGPT...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </main>
+            
+        </div>
+    </div>
+    
+    <!-- CustomGPT Embed Script -->
+    <script src="https://cdn.customgpt.ai/js/embed.js" 
+            defer 
+            div_id="customgpt_chat" 
+            p_id="82753" 
+            p_key="ea4e59faa461427ca9e80161e2de77c0">
+    </script>
+    
+    <script>
+        let customGPTLoaded = false;
+        
+        // Initialize chat
+        document.addEventListener('DOMContentLoaded', function() {
+            // Monitor CustomGPT loading
+            monitorCustomGPTLoad();
+        });
+        
+        // Monitor CustomGPT loading status
+        function monitorCustomGPTLoad() {
+            const checkInterval = setInterval(() => {
+                const chatDiv = document.getElementById('customgpt_chat');
+                const iframe = chatDiv.querySelector('iframe');
+                
+                if (iframe) {
+                    customGPTLoaded = true;
+                    clearInterval(checkInterval);
+                    
+                    // Hide loading state
+                    const loadingDiv = chatDiv.querySelector('.customgpt-loading');
+                    if (loadingDiv) {
+                        loadingDiv.style.display = 'none';
+                    }
+                    
+                    console.log('CustomGPT chatbot loaded successfully!');
+                }
+            }, 1000);
+            
+            // Timeout after 30 seconds
+            setTimeout(() => {
+                if (!customGPTLoaded) {
+                    clearInterval(checkInterval);
+                    const loadingDiv = document.querySelector('.customgpt-loading p');
+                    if (loadingDiv) {
+                        loadingDiv.textContent = 'Failed to load CustomGPT. Please refresh the page.';
+                        loadingDiv.parentElement.classList.add('text-red-400');
+                    }
+                }
+            }, 30000);
+        }
+    </script>
+</body>
+</html>
+
