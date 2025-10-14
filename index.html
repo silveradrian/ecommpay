@@ -1,13 +1,144 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" class="h-full">
 <head>
-    <meta http-equiv="refresh" content="0; url=deployment-demo.html">
-    <title>Redirecting to Savi Deployment Demo...</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Savi - Choose Your Deployment Option">
+    <title>Savi - Deployment Options</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts - Poppins & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <style>
+        /* Savi Design System Tokens */
+        :root {
+            --savi-bg: #0F2B1D;
+            --savi-gradient-start: #C137A2;
+            --savi-gradient-end: #FF6A00;
+            --savi-white: #FFFFFF;
+            --savi-black: #000000;
+            --savi-accent: #A020F0;
+        }
+        
+        .font-display { font-family: 'Poppins', sans-serif; }
+        .font-body { font-family: 'Inter', sans-serif; }
+        
+        .savi-bg { background-color: var(--savi-bg); }
+        .savi-gradient { background: linear-gradient(180deg, #C137A2 0%, #FF6A00 100%); }
+        .savi-gradient-r { background: linear-gradient(90deg, #C137A2 0%, #FF6A00 100%); }
+        
+        .savi-backdrop {
+            background-image: url('./static/images/Savi_Backgrounds_Savi_Background 5.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        
+        .option-card {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .option-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(193, 55, 162, 0.3);
+            border-color: rgba(193, 55, 162, 0.5);
+        }
+        
+        .cta-button {
+            background: linear-gradient(90deg, #C137A2 0%, #FF6A00 100%);
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-block;
+            text-decoration: none;
+        }
+        
+        .cta-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(193, 55, 162, 0.4);
+        }
+    </style>
 </head>
-<body>
-    <p>Redirecting to Savi Deployment Options Demo...</p>
-    <script>
-        window.location.href = 'deployment-demo.html';
-    </script>
+<body class="h-full savi-bg text-white font-body">
+    <!-- Background wrapper -->
+    <div class="min-h-full savi-backdrop">
+        <div class="min-h-full bg-black bg-opacity-50 flex items-center justify-center">
+            
+            <!-- Main Content -->
+            <div class="max-w-5xl mx-auto px-4 py-12">
+                
+                <!-- Header -->
+                <div class="text-center mb-12">
+                    <div class="flex justify-center items-center space-x-3 mb-4">
+                        <img src="./static/images/Savi_logo_Savi_White out copy.png" alt="Savi" class="h-12 w-auto">
+                        <h1 class="text-4xl font-display font-bold text-white">
+                            <span class="savi-gradient bg-clip-text text-transparent">Savi</span> Deployment Options
+                        </h1>
+                    </div>
+                    <p class="text-xl text-gray-300">Choose how you want to experience Savi</p>
+                </div>
+                
+                <!-- Options Grid -->
+                <div class="grid md:grid-cols-2 gap-8">
+                    
+                    <!-- Embedded Chat Option -->
+                    <div class="option-card p-8">
+                        <h2 class="text-2xl font-display font-semibold mb-4">
+                            <span class="savi-gradient bg-clip-text text-transparent">Embedded Chat</span>
+                        </h2>
+                        <p class="text-gray-300 mb-6">
+                            Experience Savi as a fully integrated chat interface on your page. 
+                            Perfect for dedicated support pages or when you want the chat to be the main focus.
+                        </p>
+                        <div class="mb-6">
+                            <p class="text-sm text-gray-400 mb-2">Implementation code:</p>
+                            <code class="text-xs bg-black bg-opacity-50 p-2 rounded block overflow-x-auto">
+                                &lt;div id="customgpt_chat"&gt;&lt;/div&gt;<br>
+                                &lt;script src="https://cdn.customgpt.ai/js/embed.js" div_id="customgpt_chat" p_id="82753" p_key="ea4e59faa461427ca9e80161e2de77c0"&gt;&lt;/script&gt;
+                            </code>
+                        </div>
+                        <a href="static.html" class="cta-button text-white">
+                            View Embedded Demo →
+                        </a>
+                    </div>
+                    
+                    <!-- Live Chat Option -->
+                    <div class="option-card p-8">
+                        <h2 class="text-2xl font-display font-semibold mb-4">
+                            <span class="savi-gradient bg-clip-text text-transparent">Live Chat Widget</span>
+                        </h2>
+                        <p class="text-gray-300 mb-6">
+                            Add a floating chat widget to any page. Users can access Savi support 
+                            without leaving their current page - perfect for e-commerce and service websites.
+                        </p>
+                        <div class="mb-6">
+                            <p class="text-sm text-gray-400 mb-2">Implementation code:</p>
+                            <code class="text-xs bg-black bg-opacity-50 p-2 rounded block overflow-x-auto">
+                                &lt;script defer src="https://cdn.customgpt.ai/js/chat.js"&gt;&lt;/script&gt;<br>
+                                &lt;script defer&gt;(function(){function init(){CustomGPT.init({p_id:'82753',p_key:'ea4e59faa461427ca9e80161e2de77c0'})}document.readyState==='complete'?init():window.addEventListener('load',init);})();&lt;/script&gt;
+                            </code>
+                        </div>
+                        <a href="livechat-demo.html" class="cta-button text-white">
+                            View Live Chat Demo →
+                        </a>
+                    </div>
+                    
+                </div>
+                
+            </div>
+            
+        </div>
+    </div>
 </body>
 </html>

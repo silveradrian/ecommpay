@@ -22,18 +22,18 @@ def inject_config():
 
 @app.route('/')
 def index():
-    """Redirect to deployment demo"""
+    """Serve the deployment options page"""
     return send_from_directory('.', 'index.html')
-
-@app.route('/deployment-demo.html')
-def deployment_demo():
-    """Serve deployment demo page"""
-    return send_from_directory('.', 'deployment-demo.html')
 
 @app.route('/static.html')
 def static_demo():
-    """Serve static embedded demo page"""
+    """Serve embedded chat demo page"""
     return send_from_directory('.', 'static.html')
+
+@app.route('/livechat-demo.html')
+def livechat_demo():
+    """Serve live chat widget demo page"""
+    return send_from_directory('.', 'livechat-demo.html')
 
 @app.route('/chat')
 def chat():

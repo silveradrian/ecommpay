@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Savi Live Chat Widget Demo">
+    <title>Savi Live Chat Demo - Sample E-commerce Page</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Sample Website Header -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-gray-900">Sample E-commerce Site</h1>
+                </div>
+                <nav class="flex space-x-8">
+                    <a href="#" class="text-gray-700 hover:text-gray-900">Shop</a>
+                    <a href="#" class="text-gray-700 hover:text-gray-900">About</a>
+                    <a href="#" class="text-gray-700 hover:text-gray-900">Contact</a>
+                    <a href="#" class="text-gray-700 hover:text-gray-900">Cart (0)</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-r from-purple-600 to-blue-600 text-white py-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-4xl font-bold mb-4">Welcome to Our Store</h2>
+            <p class="text-xl mb-8">This is a sample page demonstrating the Savi Live Chat Widget</p>
+            <div class="bg-white bg-opacity-20 rounded-lg p-4 inline-block">
+                <p class="text-sm">💬 Look for the chat widget in the bottom-right corner!</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Product Grid -->
+    <section class="py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h3 class="text-2xl font-bold text-gray-900 mb-8">Featured Products</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Product 1 -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="h-48 bg-gray-300"></div>
+                    <div class="p-6">
+                        <h4 class="text-lg font-semibold mb-2">Product Name</h4>
+                        <p class="text-gray-600 mb-4">Product description goes here</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-2xl font-bold text-gray-900">$99.99</span>
+                            <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Product 2 -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="h-48 bg-gray-300"></div>
+                    <div class="p-6">
+                        <h4 class="text-lg font-semibold mb-2">Product Name</h4>
+                        <p class="text-gray-600 mb-4">Product description goes here</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-2xl font-bold text-gray-900">$149.99</span>
+                            <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Product 3 -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="h-48 bg-gray-300"></div>
+                    <div class="p-6">
+                        <h4 class="text-lg font-semibold mb-2">Product Name</h4>
+                        <p class="text-gray-600 mb-4">Product description goes here</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-2xl font-bold text-gray-900">$199.99</span>
+                            <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Info Section -->
+    <section class="bg-gray-100 py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">Need Help?</h3>
+                <p class="text-lg text-gray-600 mb-8">
+                    Click the chat widget in the bottom-right corner to talk to Savi, our AI assistant!
+                </p>
+                <div class="bg-yellow-100 border-l-4 border-yellow-500 p-4 max-w-2xl mx-auto">
+                    <p class="text-yellow-800">
+                        <strong>Demo Note:</strong> The Savi chat widget appears as a floating button. 
+                        Click it to open the chat interface and get instant support!
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p>&copy; 2024 Sample E-commerce Site. This is a demo page for Savi Live Chat Widget.</p>
+            <a href="index.html" class="text-blue-400 hover:text-blue-300 mt-2 inline-block">← Back to Deployment Options</a>
+        </div>
+    </footer>
+
+    <!-- Savi Live Chat Widget -->
+    <script defer src="https://cdn.customgpt.ai/js/chat.js"></script>
+    <script defer>
+        (function(){
+            function init(){
+                CustomGPT.init({
+                    p_id:'82753',
+                    p_key:'ea4e59faa461427ca9e80161e2de77c0'
+                })
+            }
+            document.readyState === 'complete' ? init() : window.addEventListener('load', init);
+        })();
+    </script>
+</body>
+</html>
