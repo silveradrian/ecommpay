@@ -1,124 +1,109 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Savi Live Chat Widget Demo">
-    <title>Savi Live Chat Demo - Sample E-commerce Page</title>
+    <title>Savi - Live Chat Widget Demo</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Google Fonts -->
+    <!-- Google Fonts - Poppins & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     
+    <!-- Custom CSS -->
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        /* Savi Design System Tokens */
+        :root {
+            --savi-bg: #0F2B1D;
+            --savi-gradient-start: #C137A2;
+            --savi-gradient-end: #FF6A00;
+            --savi-white: #FFFFFF;
+            --savi-black: #000000;
+            --savi-accent: #A020F0;
+        }
+        
+        .font-display { font-family: 'Poppins', sans-serif; }
+        .font-body { font-family: 'Inter', sans-serif; }
+        
+        .savi-bg { background-color: var(--savi-bg); }
+        .savi-gradient { background: linear-gradient(180deg, #C137A2 0%, #FF6A00 100%); }
+        .savi-gradient-r { background: linear-gradient(90deg, #C137A2 0%, #FF6A00 100%); }
+        
+        .savi-backdrop {
+            background-image: url('./static/images/Savi_Backgrounds_Savi_Background 5.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        
+        .content-box {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Sample Website Header -->
-    <header class="bg-white shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center py-4">
-                <div class="flex items-center">
-                    <h1 class="text-2xl font-bold text-gray-900">Sample E-commerce Site</h1>
-                </div>
-                <nav class="flex space-x-8">
-                    <a href="#" class="text-gray-700 hover:text-gray-900">Shop</a>
-                    <a href="#" class="text-gray-700 hover:text-gray-900">About</a>
-                    <a href="#" class="text-gray-700 hover:text-gray-900">Contact</a>
-                    <a href="#" class="text-gray-700 hover:text-gray-900">Cart (0)</a>
-                </nav>
-            </div>
-        </div>
-    </header>
-
-    <!-- Hero Section -->
-    <section class="bg-gradient-to-r from-purple-600 to-blue-600 text-white py-20">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 class="text-4xl font-bold mb-4">Welcome to Our Store</h2>
-            <p class="text-xl mb-8">This is a sample page demonstrating the Savi Live Chat Widget</p>
-            <div class="bg-white bg-opacity-20 rounded-lg p-4 inline-block">
-                <p class="text-sm">💬 Look for the chat widget in the bottom-right corner!</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- Product Grid -->
-    <section class="py-16">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h3 class="text-2xl font-bold text-gray-900 mb-8">Featured Products</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <!-- Product 1 -->
-                <div class="bg-white rounded-lg shadow-md overflow-hidden">
-                    <div class="h-48 bg-gray-300"></div>
-                    <div class="p-6">
-                        <h4 class="text-lg font-semibold mb-2">Product Name</h4>
-                        <p class="text-gray-600 mb-4">Product description goes here</p>
-                        <div class="flex justify-between items-center">
-                            <span class="text-2xl font-bold text-gray-900">$99.99</span>
-                            <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add to Cart</button>
+<body class="h-full savi-bg text-white font-body">
+    <!-- Background wrapper -->
+    <div class="min-h-full savi-backdrop">
+        <div class="min-h-full bg-black bg-opacity-40">
+            
+            <!-- Main Content -->
+            <main class="min-h-screen flex items-center justify-center">
+                <div class="max-w-4xl mx-auto px-4 py-12">
+                    
+                    <!-- Header -->
+                    <div class="text-center mb-12">
+                        <div class="flex justify-center items-center space-x-3 mb-4">
+                            <img src="./static/images/Savi_logo_Savi_White out copy.png" alt="Savi" class="h-10 w-auto">
+                            <h1 class="text-3xl font-display font-bold text-white">
+                                <span class="savi-gradient bg-clip-text text-transparent">Savi</span> Live Chat Widget
+                            </h1>
+                        </div>
+                        <p class="text-xl text-gray-300">Experience the floating chat widget</p>
+                    </div>
+                    
+                    <!-- Content -->
+                    <div class="content-box p-8 text-center">
+                        <h2 class="text-2xl font-display font-semibold mb-6">Welcome to Your Website</h2>
+                        <p class="text-gray-300 mb-8">
+                            This demonstrates how the Savi chat widget appears on your website. 
+                            Look for the chat bubble in the bottom-right corner of your screen.
+                        </p>
+                        
+                        <div class="bg-white bg-opacity-10 rounded-lg p-6 mb-8">
+                            <p class="text-lg mb-2">💬 Click the chat widget to start a conversation with Savi</p>
+                            <p class="text-sm text-gray-400">The widget floats on your page and can be minimized when not in use</p>
+                        </div>
+                        
+                        <div class="flex justify-center space-x-4">
+                            <a href="index.html" class="px-6 py-3 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-all">
+                                ← Back to Options
+                            </a>
+                            <a href="static.html" class="px-6 py-3 savi-gradient text-white rounded-lg hover:shadow-lg transform hover:scale-105 transition-all">
+                                View Embedded Demo →
+                            </a>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Product 2 -->
-                <div class="bg-white rounded-lg shadow-md overflow-hidden">
-                    <div class="h-48 bg-gray-300"></div>
-                    <div class="p-6">
-                        <h4 class="text-lg font-semibold mb-2">Product Name</h4>
-                        <p class="text-gray-600 mb-4">Product description goes here</p>
-                        <div class="flex justify-between items-center">
-                            <span class="text-2xl font-bold text-gray-900">$149.99</span>
-                            <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add to Cart</button>
-                        </div>
+                    
+                    <!-- Instructions -->
+                    <div class="text-center mt-8 text-gray-400">
+                        <p class="text-sm">Implementation code:</p>
+                        <code class="text-xs bg-black bg-opacity-50 p-2 rounded inline-block mt-2">
+                            &lt;script defer src="https://cdn.customgpt.ai/js/chat.js"&gt;&lt;/script&gt;
+                        </code>
                     </div>
+                    
                 </div>
-                
-                <!-- Product 3 -->
-                <div class="bg-white rounded-lg shadow-md overflow-hidden">
-                    <div class="h-48 bg-gray-300"></div>
-                    <div class="p-6">
-                        <h4 class="text-lg font-semibold mb-2">Product Name</h4>
-                        <p class="text-gray-600 mb-4">Product description goes here</p>
-                        <div class="flex justify-between items-center">
-                            <span class="text-2xl font-bold text-gray-900">$199.99</span>
-                            <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add to Cart</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            </main>
+            
         </div>
-    </section>
-
-    <!-- Info Section -->
-    <section class="bg-gray-100 py-16">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center">
-                <h3 class="text-2xl font-bold text-gray-900 mb-4">Need Help?</h3>
-                <p class="text-lg text-gray-600 mb-8">
-                    Click the chat widget in the bottom-right corner to talk to Savi, our AI assistant!
-                </p>
-                <div class="bg-yellow-100 border-l-4 border-yellow-500 p-4 max-w-2xl mx-auto">
-                    <p class="text-yellow-800">
-                        <strong>Demo Note:</strong> The Savi chat widget appears as a floating button. 
-                        Click it to open the chat interface and get instant support!
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-8">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <p>&copy; 2024 Sample E-commerce Site. This is a demo page for Savi Live Chat Widget.</p>
-            <a href="index.html" class="text-blue-400 hover:text-blue-300 mt-2 inline-block">← Back to Deployment Options</a>
-        </div>
-    </footer>
+    </div>
 
     <!-- Savi Live Chat Widget -->
     <script defer src="https://cdn.customgpt.ai/js/chat.js"></script>
