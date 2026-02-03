@@ -37,7 +37,8 @@ console.log('Static files path:', distPath)
 app.use(express.static(distPath))
 
 // Handle SPA routing - serve index.html for all non-API routes
-app.get('*', (req, res) => {
+// Express 5 requires named wildcard parameter
+app.get('/{*path}', (req, res) => {
   if (!req.path.startsWith('/api')) {
     res.sendFile(path.join(distPath, 'index.html'))
   }
