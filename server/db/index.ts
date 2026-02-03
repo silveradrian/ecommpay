@@ -3,13 +3,25 @@ import { readFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
-// Use internal Sevalla URL when deployed, external for local dev
-const connectionString = process.env.DATABASE_URL
+// Support both DATABASE_URL and individual DB_* variables (Sevalla style)
+const connectionString = process.env.DATABASE_URL || process.env.DB_URL
 
-const pool = new Pool({
-  connectionString,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-})
+// Build config from individual vars if no connection string
+const poolConfig = connectionString
+  ? {
+      connectionString,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    }
+  : {
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT || '5432'),
+      database: process.env.DB_NAME,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    }
+
+const pool = new Pool(poolConfig)
 
 // Auto-initialize database schema on startup
 async function initializeDatabase() {

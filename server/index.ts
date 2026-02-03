@@ -2,7 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import path from 'path'
 import dotenv from 'dotenv'
-import topicsRouter from './routes/topics'
+import topicsRouter from './routes/topics.js'
 
 // Load environment variables
 dotenv.config()

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import pool from '../db'
+import pool from '../db/index.js'
 
 const router = Router()
 
@@ -89,8 +89,8 @@ router.patch('/:id', async (req: Request, res: Response) => {
     if (updates.length === 0) {
       return res.status(400).json({ error: 'No valid fields to update' })
     }
-    
-    values.push(id)
+
+    values.push(id as string)
     const result = await pool.query(
       `UPDATE topics SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`,
       values
