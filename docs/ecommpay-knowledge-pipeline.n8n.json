@@ -1,0 +1,372 @@
+{
+  "name": "Ecommpay Knowledge Content Pipeline",
+  "nodes": [
+    {
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 5 }]
+        }
+      }
+    },
+    {
+      "id": "fetch-topics",
+      "name": "Fetch Topics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [400, 300],
+      "parameters": {
+        "url": "https://ecommpay-grbzb.kinsta.app/api/topics",
+        "method": "GET",
+        "options": {}
+      }
+    },
+    {
+      "id": "filter-queued",
+      "name": "Filter Queued Topics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 300],
+      "parameters": {
+        "jsCode": "// Filter for queued topics only\nconst allTopics = items[0].json;\n\nif (!Array.isArray(allTopics)) {\n  // Single response object, wrap in array\n  return allTopics.status === 'Queued' ? [{ json: allTopics }] : [];\n}\n\nconst queued = allTopics.filter(t => t.status === 'Queued');\nreturn queued.map(t => ({ json: t }));"
+      }
+    },
+    {
+      "id": "check-has-items",
+      "name": "Has Queued Topics?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [800, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "set-in-progress",
+      "name": "Update Status → In Progress",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1000, 300],
+      "parameters": {
+        "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $json.id }}",
+        "method": "PATCH",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{ "name": "status", "value": "In Progress" }]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "build-outline",
+      "name": "Build Document Outline (GPT-4)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.4,
+      "position": [1200, 300],
+      "parameters": {
+        "model": "gpt-4o",
+        "options": { "temperature": 0.2 },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a document structure expert. Generate ONLY a JSON object with no additional text. The JSON must have: title (string), sections (array of {heading, description}), and faqs (array of {question})."
+            },
+            {
+              "content": "=Create a document outline for the topic: \"{{ $json.topic }}\"\n\nCategory: {{ $json.category || 'General' }}\nPriority: {{ $json.priority }}\n\nReturn ONLY valid JSON.",
+              "role": "user"
+            }
+          ]
+        }
+      },
+      "credentials": { "openAiApi": { "id": "OPENAI_CREDENTIAL_ID", "name": "OpenAI API" } }
+    },
+    {
+      "id": "parse-outline",
+      "name": "Parse Outline JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1400, 300],
+      "parameters": {
+        "jsCode": "// Parse the GPT response and extract JSON outline\nconst response = $input.first().json;\nconst topic = $('Update Status → In Progress').first().json;\n\nlet outline;\ntry {\n  // Try to parse the response content\n  const content = response.message?.content || response.choices?.[0]?.message?.content || JSON.stringify(response);\n  // Extract JSON from response (handle markdown code blocks)\n  const jsonMatch = content.match(/```json\\n?([\\s\\S]*?)\\n?```/) || content.match(/\\{[\\s\\S]*\\}/);\n  outline = JSON.parse(jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content);\n} catch (e) {\n  outline = { title: topic.topic, sections: [{ heading: 'Overview', description: 'Main content' }], faqs: [] };\n}\n\nreturn [{\n  json: {\n    ...topic,\n    outline: outline,\n    title: outline.title || topic.topic,\n    sections: outline.sections || [],\n    faqs: outline.faqs || []\n  }\n}];"
+      }
+    },
+    {
+      "id": "generate-content",
+      "name": "Generate Content (Perplexity)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1600, 300],
+      "parameters": {
+        "url": "https://api.perplexity.ai/chat/completions",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sonar-pro\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a technical content writer. Write detailed, accurate content for each section. Use markdown formatting. Be thorough but concise.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Write detailed content for this document:\\n\\nTitle: {{ $json.title }}\\n\\nSections to write:\\n{{ $json.sections.map((s, i) => `${i+1}. ${s.heading}: ${s.description || ''}`).join('\\\\n') }}\\n\\nFAQs to answer:\\n{{ $json.faqs.map((f, i) => `${i+1}. ${f.question}`).join('\\\\n') }}\\n\\nProvide complete markdown content for each section and FAQ.\"\n    }\n  ],\n  \"temperature\": 0.3,\n  \"max_tokens\": 4000\n}",
+        "options": {}
+      },
+      "credentials": { "httpHeaderAuth": { "id": "PERPLEXITY_CREDENTIAL_ID", "name": "Perplexity API" } }
+    },
+    {
+      "id": "assemble-draft",
+      "name": "Assemble Draft Document",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 300],
+      "parameters": {
+        "jsCode": "// Assemble the final markdown document\nconst perplexityResponse = $input.first().json;\nconst topicData = $('Parse Outline JSON').first().json;\n\n// Extract content from Perplexity response\nlet generatedContent = '';\ntry {\n  generatedContent = perplexityResponse.choices?.[0]?.message?.content || '';\n} catch (e) {\n  generatedContent = '';\n}\n\n// Build the final markdown\nconst title = topicData.title || topicData.topic;\nlet md = `# ${title}\\n\\n`;\n\nif (generatedContent) {\n  // Use the AI-generated content directly\n  md += generatedContent;\n} else {\n  // Fallback: build from outline\n  for (const s of topicData.sections || []) {\n    md += `## ${s.heading}\\n\\n${s.description || 'Content pending.'}\\n\\n`;\n  }\n  \n  if (topicData.faqs?.length) {\n    md += '## Frequently Asked Questions\\n\\n';\n    for (const f of topicData.faqs) {\n      md += `### ${f.question}\\n\\nAnswer pending.\\n\\n`;\n    }\n  }\n}\n\n// Add metadata footer\nmd += `\\n---\\n\\n*Generated on ${new Date().toISOString().split('T')[0]}*\\n`;\n\nreturn [{\n  json: {\n    id: topicData.id,\n    topic: topicData.topic,\n    category: topicData.category,\n    priority: topicData.priority,\n    title: title,\n    draft_markdown: md\n  }\n}];"
+      }
+    },
+    {
+      "id": "set-in-review",
+      "name": "Update Status → In Review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2000, 300],
+      "parameters": {
+        "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $json.id }}",
+        "method": "PATCH",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{ "name": "status", "value": "In Review" }]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "gotohuman-approval",
+      "name": "GoToHuman Approval",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2200, 300],
+      "parameters": {
+        "url": "https://api.gotohuman.com/v1/reviews",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"title\": \"Review: {{ $json.topic }}\",\n  \"description\": \"Please review the generated content for accuracy and quality.\",\n  \"content\": {{ JSON.stringify($json.draft_markdown) }},\n  \"metadata\": {\n    \"topic_id\": \"{{ $json.id }}\",\n    \"category\": \"{{ $json.category }}\",\n    \"priority\": \"{{ $json.priority }}\"\n  },\n  \"callback_url\": \"YOUR_N8N_WEBHOOK_URL\"\n}",
+        "options": {}
+      },
+      "credentials": { "httpHeaderAuth": { "id": "GOTOHUMAN_CREDENTIAL_ID", "name": "GoToHuman API" } }
+    },
+    {
+      "id": "wait-for-approval",
+      "name": "Wait for Human Decision",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [2400, 300],
+      "webhookId": "gotohuman-callback",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gotohuman-callback",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "id": "check-approval",
+      "name": "Approved or Rejected?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [2600, 300],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "approved",
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "approved",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "rejected",
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "rejected",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "extra" }
+      }
+    },
+    {
+      "id": "set-approved",
+      "name": "Update Status → Approved",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2800, 200],
+      "parameters": {
+        "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $json.metadata.topic_id || $json.topic_id }}",
+        "method": "PATCH",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"Approved\",\n  \"approved_content\": {{ JSON.stringify($json.content || $json.draft_markdown) }}\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "set-rejected",
+      "name": "Update Status → Rejected",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2800, 400],
+      "parameters": {
+        "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $json.metadata.topic_id || $json.topic_id }}",
+        "method": "PATCH",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{ "name": "status", "value": "Rejected" }]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "convert-to-binary",
+      "name": "Convert MD to Binary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3000, 200],
+      "parameters": {
+        "jsCode": "// Convert markdown content to binary for file upload\nconst data = $input.first().json;\nconst markdown = data.approved_content || data.content || data.draft_markdown || '';\nconst topicId = data.id || data.metadata?.topic_id || data.topic_id;\n\n// Create binary data from markdown string\nconst binaryData = Buffer.from(markdown, 'utf-8');\n\nreturn [{\n  json: {\n    topic_id: topicId\n  },\n  binary: {\n    md: {\n      data: binaryData.toString('base64'),\n      mimeType: 'text/markdown',\n      fileName: 'content.md'\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "upload-files",
+      "name": "Upload MD File",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [3200, 200],
+      "parameters": {
+        "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $json.topic_id }}/files",
+        "method": "POST",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "md",
+              "parameterType": "formBinaryData",
+              "inputDataFieldName": "md"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "no-items-stop",
+      "name": "No Queued Topics",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1000, 500],
+      "parameters": {}
+    },
+    {
+      "id": "error-handler",
+      "name": "Error: Reset to Queued",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1400, 500],
+      "parameters": {
+        "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $json.id }}",
+        "method": "PATCH",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{ "name": "status", "value": "Queued" }]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [[{ "node": "Fetch Topics", "type": "main", "index": 0 }]]
+    },
+    "Fetch Topics": {
+      "main": [[{ "node": "Filter Queued Topics", "type": "main", "index": 0 }]]
+    },
+    "Filter Queued Topics": {
+      "main": [[{ "node": "Has Queued Topics?", "type": "main", "index": 0 }]]
+    },
+    "Has Queued Topics?": {
+      "main": [
+        [{ "node": "Update Status → In Progress", "type": "main", "index": 0 }],
+        [{ "node": "No Queued Topics", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Status → In Progress": {
+      "main": [[{ "node": "Build Document Outline (GPT-4)", "type": "main", "index": 0 }]]
+    },
+    "Build Document Outline (GPT-4)": {
+      "main": [[{ "node": "Parse Outline JSON", "type": "main", "index": 0 }]]
+    },
+    "Parse Outline JSON": {
+      "main": [[{ "node": "Generate Content (Perplexity)", "type": "main", "index": 0 }]]
+    },
+    "Generate Content (Perplexity)": {
+      "main": [[{ "node": "Assemble Draft Document", "type": "main", "index": 0 }]]
+    },
+    "Assemble Draft Document": {
+      "main": [[{ "node": "Update Status → In Review", "type": "main", "index": 0 }]]
+    },
+    "Update Status → In Review": {
+      "main": [[{ "node": "GoToHuman Approval", "type": "main", "index": 0 }]]
+    },
+    "GoToHuman Approval": {
+      "main": [[{ "node": "Wait for Human Decision", "type": "main", "index": 0 }]]
+    },
+    "Wait for Human Decision": {
+      "main": [[{ "node": "Approved or Rejected?", "type": "main", "index": 0 }]]
+    },
+    "Approved or Rejected?": {
+      "main": [
+        [{ "node": "Update Status → Approved", "type": "main", "index": 0 }],
+        [{ "node": "Update Status → Rejected", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Status → Approved": {
+      "main": [[{ "node": "Convert MD to Binary", "type": "main", "index": 0 }]]
+    },
+    "Convert MD to Binary": {
+      "main": [[{ "node": "Upload MD File", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "error-handler",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "active": false
+}
