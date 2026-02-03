@@ -1,3 +1,9 @@
+# Node.js
+node_modules/
+dist-server/
+dist-node/
+*.tsbuildinfo
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -166,7 +172,6 @@ temp/
 *.bak
 *.backup
 
-# User rules - MD and temporary scripts in gitignore doc folder
+# User rules - temporary scripts in gitignore doc folder
 gitignore/
-*.md
 temp_scripts/

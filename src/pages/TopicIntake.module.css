@@ -1,0 +1,110 @@
+.container {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: var(--space-2xl);
+}
+
+.title {
+  font-size: var(--text-h2);
+  margin-bottom: var(--space-sm);
+}
+
+.subtitle {
+  color: var(--color-text-secondary);
+}
+
+.form {
+  background: rgba(15, 43, 29, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.label {
+  font-weight: 500;
+  font-size: var(--text-caption);
+}
+
+.required {
+  color: var(--color-gradient-start);
+}
+
+.optional {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.input,
+.select {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-default);
+  padding: var(--space-md);
+  color: var(--color-text-primary);
+  transition: all var(--transition-fast);
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--color-gradient-end);
+  box-shadow: 0 0 0 3px rgba(255, 106, 0, 0.2);
+}
+
+.select {
+  cursor: pointer;
+}
+
+.select option {
+  background: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+.submitButton {
+  background: var(--gradient-horizontal);
+  color: var(--color-white);
+  font-weight: 600;
+  padding: var(--space-md) var(--space-xl);
+  border-radius: var(--radius-default);
+  margin-top: var(--space-md);
+  transition: all var(--transition-fast);
+}
+
+.submitButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.submitButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid var(--color-status-rejected);
+  color: var(--color-status-rejected);
+  padding: var(--space-md);
+  border-radius: var(--radius-default);
+  margin-bottom: var(--space-md);
+  text-align: center;
+}
+
