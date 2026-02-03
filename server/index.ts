@@ -3,6 +3,7 @@ import cors from 'cors'
 import path from 'path'
 import dotenv from 'dotenv'
 import topicsRouter from './routes/topics.js'
+import filesRouter from './routes/files.js'
 
 // Load environment variables
 dotenv.config()
@@ -16,6 +17,7 @@ app.use(express.json())
 
 // API Routes
 app.use('/api/topics', topicsRouter)
+app.use('/api/topics', filesRouter)
 
 // Health check endpoint
 app.get('/api/health', (_, res) => {

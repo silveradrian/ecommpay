@@ -113,6 +113,33 @@ function ContentView() {
         </div>
       </div>
 
+      {/* Download buttons for n8n-generated files */}
+      {(topic.md_file_path || topic.pdf_file_path) && (
+        <div className={styles.downloadSection}>
+          <h3 className={styles.downloadTitle}>Final Output Files</h3>
+          <div className={styles.downloadButtons}>
+            {topic.md_file_path && (
+              <a
+                href={`/api/topics/${topic.id}/files/content.md`}
+                download
+                className={styles.downloadButton}
+              >
+                📄 Download MD
+              </a>
+            )}
+            {topic.pdf_file_path && (
+              <a
+                href={`/api/topics/${topic.id}/files/content.pdf`}
+                download
+                className={styles.downloadButton}
+              >
+                📕 Download PDF
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className={styles.contentCard}>
         <pre className={styles.content}>{topic.approved_content}</pre>
       </div>

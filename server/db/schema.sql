@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS topics (
     priority VARCHAR(20) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
     status VARCHAR(50) DEFAULT 'Queued' CHECK (status IN ('Queued', 'In Progress', 'In Review', 'Approved', 'Rejected')),
     approved_content TEXT,
+    md_file_path VARCHAR(500),
+    pdf_file_path VARCHAR(500),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     approved_at TIMESTAMP WITH TIME ZONE

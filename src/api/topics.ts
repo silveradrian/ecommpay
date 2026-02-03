@@ -9,6 +9,8 @@ export interface Topic {
   priority: 'low' | 'medium' | 'high'
   status: 'Queued' | 'In Progress' | 'In Review' | 'Approved' | 'Rejected'
   approved_content: string | null
+  md_file_path: string | null
+  pdf_file_path: string | null
   created_at: string
   updated_at: string
   approved_at: string | null
