@@ -20,7 +20,7 @@ function ensureDir(dir: string) {
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const topicId = req.params.id
+    const topicId = req.params.id as string
     const topicDir = path.join(TOPICS_DIR, topicId)
     ensureDir(topicDir)
     cb(null, topicDir)
@@ -79,7 +79,7 @@ router.post('/:id/files', upload.fields([
       values.push(files.pdf[0].path)
     }
 
-    values.push(id)
+    values.push(id as string)
 
     // Update database with file paths
     const result = await pool.query(
@@ -104,8 +104,9 @@ router.post('/:id/files', upload.fields([
 // GET /api/topics/:id/files/:filename - Download a file
 router.get('/:id/files/:filename', async (req: Request, res: Response) => {
   try {
-    const { id, filename } = req.params
-    
+    const id = req.params.id as string
+    const filename = req.params.filename as string
+
     // Validate filename to prevent directory traversal
     if (!['content.md', 'content.pdf'].includes(filename)) {
       return res.status(400).json({ error: 'Invalid filename' })
@@ -118,8 +119,8 @@ router.get('/:id/files/:filename', async (req: Request, res: Response) => {
     }
 
     // Set appropriate content type
-    const contentType = filename.endsWith('.pdf') 
-      ? 'application/pdf' 
+    const contentType = filename.endsWith('.pdf')
+      ? 'application/pdf'
       : 'text/markdown'
 
     res.setHeader('Content-Type', contentType)

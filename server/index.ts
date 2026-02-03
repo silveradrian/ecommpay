@@ -1,9 +1,14 @@
 import express from 'express'
 import cors from 'cors'
 import path from 'path'
+import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
 import topicsRouter from './routes/topics.js'
 import filesRouter from './routes/files.js'
+
+// ES module __dirname equivalent
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // Load environment variables
 dotenv.config()
@@ -25,16 +30,18 @@ app.get('/api/health', (_, res) => {
 })
 
 // Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../dist')))
-  
-  // Handle SPA routing - serve index.html for all non-API routes
-  app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api')) {
-      res.sendFile(path.join(__dirname, '../dist/index.html'))
-    }
-  })
-}
+// dist-server is at root, dist (frontend) is also at root
+const distPath = path.join(__dirname, '../dist')
+console.log('Static files path:', distPath)
+
+app.use(express.static(distPath))
+
+// Handle SPA routing - serve index.html for all non-API routes
+app.get('*', (req, res) => {
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(distPath, 'index.html'))
+  }
+})
 
 app.listen(PORT, () => {
   console.log(`✓ Server running on port ${PORT}`)
