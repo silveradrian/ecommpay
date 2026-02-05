@@ -155,21 +155,11 @@
       }
     },
     {
-      "id": "split-sections",
-      "name": "Split Into Sections",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [2000, 300],
-      "parameters": {
-        "jsCode": "// Split the document into individual sections for parallel processing\nconst topicData = $input.first().json;\nconst sections = topicData.sections || [];\nconst faqs = topicData.faqs || [];\n\n// Create output items for each section (for parallel Perplexity calls)\nconst outputItems = [];\n\n// Add regular sections\nfor (let i = 0; i < sections.length; i++) {\n  outputItems.push({\n    json: {\n      section_index: i,\n      section_type: 'content',\n      heading: sections[i].heading,\n      description: sections[i].description || '',\n      // Include context for the AI\n      document_title: topicData.title,\n      document_topic: topicData.topic,\n      target_keywords: topicData.target_keywords || [],\n      seo_enrichment: topicData.seo_enrichment,\n      // Pass through topic metadata\n      topic_id: topicData.id,\n      topic_category: topicData.category,\n      topic_priority: topicData.priority,\n      total_sections: sections.length,\n      total_faqs: faqs.length\n    }\n  });\n}\n\n// Add FAQs as a single section\nif (faqs.length > 0) {\n  outputItems.push({\n    json: {\n      section_index: sections.length,\n      section_type: 'faqs',\n      heading: 'Frequently Asked Questions',\n      description: 'Answer these questions thoroughly',\n      faqs: faqs,\n      // Include context for the AI\n      document_title: topicData.title,\n      document_topic: topicData.topic,\n      target_keywords: topicData.target_keywords || [],\n      seo_enrichment: topicData.seo_enrichment,\n      // Pass through topic metadata\n      topic_id: topicData.id,\n      topic_category: topicData.category,\n      topic_priority: topicData.priority,\n      total_sections: sections.length,\n      total_faqs: faqs.length\n    }\n  });\n}\n\nreturn outputItems;"
-      }
-    },
-    {
-      "id": "generate-section-content",
-      "name": "Generate Section Content (Perplexity)",
+      "id": "generate-content",
+      "name": "Generate Content (Perplexity)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [2200, 300],
+      "position": [2000, 300],
       "parameters": {
         "url": "https://api.perplexity.ai/chat/completions",
         "method": "POST",
@@ -177,47 +167,19 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"sonar-pro\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an expert SEO content writer. Write detailed, accurate, and engaging content optimized for search engines. Use markdown formatting. Naturally incorporate target keywords without keyword stuffing. Write ONLY the content for the specific section requested - do not include other sections.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.section_type === 'faqs' ? `Write comprehensive FAQ content for the document titled \"${$json.document_title}\" about \"${$json.document_topic}\".\n\nTarget Keywords to incorporate naturally: ${$json.target_keywords?.join(', ') || 'N/A'}\n\nWrite a complete FAQ section with the heading \"## Frequently Asked Questions\"\n\nAnswer each of these questions thoroughly (2-3 paragraphs each):\n${$json.faqs.map((f, i) => `${i+1}. ${f.question}`).join('\\n')}\n\nFormat each FAQ as:\n### [Question]\n[Detailed answer]\n\nProvide accurate, helpful answers based on current knowledge.` : `Write comprehensive content for ONE section of a document titled \"${$json.document_title}\" about \"${$json.document_topic}\".\n\nTarget Keywords to incorporate naturally: ${$json.target_keywords?.join(', ') || 'N/A'}\n\nWrite ONLY this section:\n## ${$json.heading}\n${$json.description || ''}\n\nProvide detailed, well-researched content for this specific section (3-5 paragraphs minimum). Include relevant examples, statistics, or best practices where appropriate. Start with the ## heading.`) }}\n    }\n  ],\n  \"temperature\": 0.3,\n  \"max_tokens\": 2000\n}",
-        "options": {
-          "batching": {
-            "batch": {
-              "batchSize": 5,
-              "batchInterval": 1000
-            }
-          }
-        }
+        "jsonBody": "={\n  \"model\": \"sonar-pro\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an expert SEO content writer. Write detailed, accurate, and engaging content optimized for search engines. Use markdown formatting. Naturally incorporate target keywords without keyword stuffing.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Write comprehensive content for this document:\\n\\nTitle: {{ $json.title }}\\n\\nTarget Keywords to incorporate naturally:\\n{{ $json.target_keywords?.join(', ') || $json.seo_enrichment?.keyword_suggestions?.slice(0,5).map(k => k.keyword).join(', ') || 'N/A' }}\\n\\nSections to write:\\n{{ $json.sections.map((s, i) => `${i+1}. ${s.heading}: ${s.description || ''}`).join('\\\\n') }}\\n\\nFAQs to answer (from People Also Ask):\\n{{ $json.faqs.map((f, i) => `${i+1}. ${f.question}`).join('\\\\n') }}\\n\\nRelated topics to reference:\\n{{ $json.seo_enrichment?.related_searches?.join(', ') || 'N/A' }}\\n\\nProvide complete markdown content for each section. Answer ALL FAQs thoroughly.\"\n    }\n  ],\n  \"temperature\": 0.3,\n  \"max_tokens\": 6000\n}",
+        "options": {}
       },
       "credentials": { "httpHeaderAuth": { "id": "PERPLEXITY_CREDENTIAL_ID", "name": "Perplexity API" } }
-    },
-    {
-      "id": "extract-section-content",
-      "name": "Extract Section Content",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [2400, 300],
-      "parameters": {
-        "jsCode": "// Extract the generated content from Perplexity response\nconst perplexityResponse = $input.first().json;\nconst inputData = $('Split Into Sections').item;\n\n// Extract content from Perplexity response\nlet generatedContent = '';\ntry {\n  generatedContent = perplexityResponse.choices?.[0]?.message?.content || '';\n} catch (e) {\n  generatedContent = `## ${inputData.json.heading}\\n\\nContent generation failed.`;\n}\n\nreturn [{\n  json: {\n    section_index: inputData.json.section_index,\n    section_type: inputData.json.section_type,\n    heading: inputData.json.heading,\n    content: generatedContent,\n    // Pass through metadata\n    topic_id: inputData.json.topic_id,\n    document_title: inputData.json.document_title,\n    document_topic: inputData.json.document_topic,\n    topic_category: inputData.json.topic_category,\n    topic_priority: inputData.json.topic_priority,\n    target_keywords: inputData.json.target_keywords,\n    seo_enrichment: inputData.json.seo_enrichment,\n    total_sections: inputData.json.total_sections,\n    total_faqs: inputData.json.total_faqs\n  }\n}];"
-      }
-    },
-    {
-      "id": "merge-sections",
-      "name": "Merge All Sections",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [2600, 300],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// Merge all generated sections back into a single document\nconst allSections = $input.all().map(item => item.json);\n\n// Sort sections by index to maintain order\nallSections.sort((a, b) => a.section_index - b.section_index);\n\n// Get metadata from first item\nconst firstItem = allSections[0] || {};\n\n// Combine all content\nlet combinedContent = '';\nfor (const section of allSections) {\n  if (section.content) {\n    combinedContent += section.content + '\\n\\n';\n  }\n}\n\nreturn [{\n  json: {\n    id: firstItem.topic_id,\n    topic: firstItem.document_topic,\n    title: firstItem.document_title,\n    category: firstItem.topic_category,\n    priority: firstItem.topic_priority,\n    target_keywords: firstItem.target_keywords,\n    seo_enrichment: firstItem.seo_enrichment,\n    generated_content: combinedContent.trim(),\n    sections_generated: allSections.length\n  }\n}];"
-      }
     },
     {
       "id": "assemble-draft",
       "name": "Assemble Draft Document",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2800, 300],
+      "position": [2200, 300],
       "parameters": {
-        "jsCode": "// Assemble the final markdown document with SEO metadata\nconst topicData = $input.first().json;\n\n// Build the final markdown\nconst title = topicData.title || topicData.topic;\nlet md = `# ${title}\\n\\n`;\n\n// Add the generated content\nif (topicData.generated_content) {\n  md += topicData.generated_content;\n} else {\n  md += 'Content generation pending.\\n';\n}\n\n// Add SEO metadata section\nconst seoData = topicData.seo_enrichment || {};\nif (seoData.keyword_suggestions?.length || seoData.related_searches?.length) {\n  md += '\\n\\n---\\n\\n## SEO Metadata\\n\\n';\n  \n  if (topicData.target_keywords?.length) {\n    md += `**Target Keywords:** ${topicData.target_keywords.join(', ')}\\n\\n`;\n  }\n  \n  if (seoData.keyword_suggestions?.length) {\n    md += '**Related Keywords:**\\n';\n    for (const kw of seoData.keyword_suggestions.slice(0, 10)) {\n      md += `- ${kw.keyword} (Search Vol: ${kw.search_volume})\\n`;\n    }\n    md += '\\n';\n  }\n  \n  if (seoData.related_searches?.length) {\n    md += `**Related Searches:** ${seoData.related_searches.join(', ')}\\n\\n`;\n  }\n}\n\n// Add generation footer\nmd += `\\n---\\n\\n*Generated on ${new Date().toISOString().split('T')[0]} | SEO-optimized content | ${topicData.sections_generated || 0} sections processed in parallel*\\n`;\n\nreturn [{\n  json: {\n    id: topicData.id,\n    topic: topicData.topic,\n    category: topicData.category,\n    priority: topicData.priority,\n    title: title,\n    draft_markdown: md,\n    seo_enrichment: seoData\n  }\n}];"
+        "jsCode": "// Assemble the final markdown document with SEO metadata\nconst perplexityResponse = $input.first().json;\nconst topicData = $('Parse Outline JSON').first().json;\n\n// Extract content from Perplexity response\nlet generatedContent = '';\ntry {\n  generatedContent = perplexityResponse.choices?.[0]?.message?.content || '';\n} catch (e) {\n  generatedContent = '';\n}\n\n// Build the final markdown\nconst title = topicData.title || topicData.topic;\nlet md = `# ${title}\\n\\n`;\n\nif (generatedContent) {\n  // Use the AI-generated content directly\n  md += generatedContent;\n} else {\n  // Fallback: build from outline\n  for (const s of topicData.sections || []) {\n    md += `## ${s.heading}\\n\\n${s.description || 'Content pending.'}\\n\\n`;\n  }\n  \n  if (topicData.faqs?.length) {\n    md += '## Frequently Asked Questions\\n\\n';\n    for (const f of topicData.faqs) {\n      md += `### ${f.question}\\n\\nAnswer pending.\\n\\n`;\n    }\n  }\n}\n\n// Add SEO metadata section\nconst seoData = topicData.seo_enrichment || {};\nif (seoData.keyword_suggestions?.length || seoData.related_searches?.length) {\n  md += '\\n---\\n\\n## SEO Metadata\\n\\n';\n  \n  if (topicData.target_keywords?.length) {\n    md += `**Target Keywords:** ${topicData.target_keywords.join(', ')}\\n\\n`;\n  }\n  \n  if (seoData.keyword_suggestions?.length) {\n    md += '**Related Keywords:**\\n';\n    for (const kw of seoData.keyword_suggestions.slice(0, 10)) {\n      md += `- ${kw.keyword} (Search Vol: ${kw.search_volume})\\n`;\n    }\n    md += '\\n';\n  }\n  \n  if (seoData.related_searches?.length) {\n    md += `**Related Searches:** ${seoData.related_searches.join(', ')}\\n\\n`;\n  }\n}\n\n// Add generation footer\nmd += `\\n---\\n\\n*Generated on ${new Date().toISOString().split('T')[0]} | SEO-optimized content*\\n`;\n\nreturn [{\n  json: {\n    id: topicData.id,\n    topic: topicData.topic,\n    category: topicData.category,\n    priority: topicData.priority,\n    title: title,\n    draft_markdown: md,\n    seo_enrichment: seoData\n  }\n}];"
       }
     },
     {
@@ -225,7 +187,7 @@
       "name": "Update Status → In Review",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [3000, 300],
+      "position": [2000, 300],
       "parameters": {
         "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $json.id }}",
         "method": "PATCH",
@@ -241,7 +203,7 @@
       "name": "GoToHuman Approval",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [3200, 300],
+      "position": [2200, 300],
       "parameters": {
         "url": "https://api.gotohuman.com/v1/reviews",
         "method": "POST",
@@ -259,7 +221,7 @@
       "name": "Wait for Human Decision",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
-      "position": [3400, 300],
+      "position": [2400, 300],
       "webhookId": "gotohuman-callback",
       "parameters": {
         "httpMethod": "POST",
@@ -273,7 +235,7 @@
       "name": "Approved or Rejected?",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
-      "position": [3600, 300],
+      "position": [2600, 300],
       "parameters": {
         "rules": {
           "values": [
@@ -311,7 +273,7 @@
       "name": "Update Status → Approved",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [3800, 200],
+      "position": [2800, 200],
       "parameters": {
         "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $json.metadata.topic_id || $json.topic_id }}",
         "method": "PATCH",
@@ -326,7 +288,7 @@
       "name": "Update Status → Rejected",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [3800, 400],
+      "position": [2800, 400],
       "parameters": {
         "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $json.metadata.topic_id || $json.topic_id }}",
         "method": "PATCH",
@@ -342,7 +304,7 @@
       "name": "Convert MD to Binary",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [4000, 200],
+      "position": [3000, 200],
       "parameters": {
         "jsCode": "// Convert markdown content to binary for file upload\nconst data = $input.first().json;\nconst markdown = data.approved_content || data.content || data.draft_markdown || '';\nconst topicId = data.id || data.metadata?.topic_id || data.topic_id;\n\n// Create binary data from markdown string\nconst binaryData = Buffer.from(markdown, 'utf-8');\n\nreturn [{\n  json: {\n    topic_id: topicId\n  },\n  binary: {\n    md: {\n      data: binaryData.toString('base64'),\n      mimeType: 'text/markdown',\n      fileName: 'content.md'\n    }\n  }\n}];"
       }
@@ -352,7 +314,7 @@
       "name": "Upload MD File",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [4200, 200],
+      "position": [3200, 200],
       "parameters": {
         "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $json.topic_id }}/files",
         "method": "POST",
@@ -418,18 +380,9 @@
       "main": [[{ "node": "Parse Outline JSON", "type": "main", "index": 0 }]]
     },
     "Parse Outline JSON": {
-      "main": [[{ "node": "Split Into Sections", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Generate Content (Perplexity)", "type": "main", "index": 0 }]]
     },
-    "Split Into Sections": {
-      "main": [[{ "node": "Generate Section Content (Perplexity)", "type": "main", "index": 0 }]]
-    },
-    "Generate Section Content (Perplexity)": {
-      "main": [[{ "node": "Extract Section Content", "type": "main", "index": 0 }]]
-    },
-    "Extract Section Content": {
-      "main": [[{ "node": "Merge All Sections", "type": "main", "index": 0 }]]
-    },
-    "Merge All Sections": {
+    "Generate Content (Perplexity)": {
       "main": [[{ "node": "Assemble Draft Document", "type": "main", "index": 0 }]]
     },
     "Assemble Draft Document": {

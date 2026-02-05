@@ -11,6 +11,8 @@ export interface Topic {
   approved_content: string | null
   md_file_path: string | null
   pdf_file_path: string | null
+  customgpt_source_id: string | null
+  customgpt_added_at: string | null
   created_at: string
   updated_at: string
   approved_at: string | null
@@ -60,6 +62,23 @@ export async function createTopic(data: CreateTopicData): Promise<Topic> {
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Failed to create topic' }))
     throw new Error(error.error || 'Failed to create topic')
+  }
+  
+  return response.json()
+}
+
+// Add approved content to customGPT knowledge base
+export async function addToCustomGPT(topicId: string): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_BASE}/topics/${topicId}/add-to-customgpt`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to add to customGPT' }))
+    throw new Error(error.error || 'Failed to add to customGPT')
   }
   
   return response.json()

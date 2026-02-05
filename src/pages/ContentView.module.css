@@ -130,3 +130,42 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(193, 55, 162, 0.4);
 }
+
+/* CustomGPT button styles */
+.gptButton {
+  background: linear-gradient(135deg, #10a37f, #1a7f5a);
+  border-color: #10a37f;
+}
+
+.gptButton:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1a7f5a, #10a37f);
+  border-color: #1a7f5a;
+  box-shadow: 0 4px 12px rgba(16, 163, 127, 0.3);
+}
+
+.gptButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.gptButton.success {
+  background: linear-gradient(135deg, #10a37f, #059669);
+  border-color: #10a37f;
+}
+
+.gptButton.errorState {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border-color: #ef4444;
+}
+
+.gptButton.alreadyAdded {
+  background: rgba(16, 163, 127, 0.2);
+  border-color: #10a37f;
+  cursor: default;
+  opacity: 0.9;
+}
+
+.gptDate {
+  font-size: var(--text-caption);
+  opacity: 0.8;
+}

@@ -65,7 +65,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.patch('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params
-    const { status, approved_content } = req.body
+    const { status, approved_content, customgpt_source_id, customgpt_added_at } = req.body
     
     // Build dynamic update query
     const updates: string[] = []
@@ -86,6 +86,16 @@ router.patch('/:id', async (req: Request, res: Response) => {
       values.push(approved_content)
     }
     
+    if (customgpt_source_id !== undefined) {
+      updates.push(`customgpt_source_id = $${paramCount++}`)
+      values.push(customgpt_source_id)
+    }
+    
+    if (customgpt_added_at !== undefined) {
+      updates.push(`customgpt_added_at = $${paramCount++}`)
+      values.push(customgpt_added_at)
+    }
+    
     if (updates.length === 0) {
       return res.status(400).json({ error: 'No valid fields to update' })
     }
@@ -104,6 +114,63 @@ router.patch('/:id', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error updating topic:', error)
     res.status(500).json({ error: 'Failed to update topic' })
+  }
+})
+
+// POST /api/topics/:id/add-to-customgpt - Trigger n8n workflow to add content to customGPT
+router.post('/:id/add-to-customgpt', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    
+    // Fetch the topic to get approved content
+    const result = await pool.query(
+      'SELECT * FROM topics WHERE id = $1',
+      [id]
+    )
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Topic not found' })
+    }
+    
+    const topic = result.rows[0]
+    
+    if (topic.status !== 'Approved' || !topic.approved_content) {
+      return res.status(400).json({ error: 'Topic must be approved with content before adding to customGPT' })
+    }
+    
+    // Get n8n webhook URL from environment
+    const n8nWebhookUrl = process.env.N8N_CUSTOMGPT_WEBHOOK_URL
+    
+    if (!n8nWebhookUrl) {
+      console.error('N8N_CUSTOMGPT_WEBHOOK_URL not configured')
+      return res.status(500).json({ error: 'CustomGPT integration not configured' })
+    }
+    
+    // Trigger n8n workflow via webhook
+    const webhookResponse = await fetch(n8nWebhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        topic_id: topic.id,
+        topic: topic.topic,
+        category: topic.category,
+        content: topic.approved_content,
+        approved_at: topic.approved_at,
+      }),
+    })
+    
+    if (!webhookResponse.ok) {
+      const errorText = await webhookResponse.text()
+      console.error('n8n webhook error:', errorText)
+      return res.status(500).json({ error: 'Failed to trigger customGPT workflow' })
+    }
+    
+    res.json({ success: true, message: 'Content queued for addition to customGPT knowledge base' })
+  } catch (error) {
+    console.error('Error adding to customGPT:', error)
+    res.status(500).json({ error: 'Failed to add to customGPT' })
   }
 })
 

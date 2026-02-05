@@ -11,10 +11,23 @@ CREATE TABLE IF NOT EXISTS topics (
     approved_content TEXT,
     md_file_path VARCHAR(500),
     pdf_file_path VARCHAR(500),
+    customgpt_source_id VARCHAR(100),
+    customgpt_added_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     approved_at TIMESTAMP WITH TIME ZONE
 );
+
+-- Migration: Add customgpt columns if they don't exist
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'topics' AND column_name = 'customgpt_source_id') THEN
+        ALTER TABLE topics ADD COLUMN customgpt_source_id VARCHAR(100);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'topics' AND column_name = 'customgpt_added_at') THEN
+        ALTER TABLE topics ADD COLUMN customgpt_added_at TIMESTAMP WITH TIME ZONE;
+    END IF;
+END $$;
 
 -- Index for faster status filtering
 CREATE INDEX IF NOT EXISTS idx_topics_status ON topics(status);

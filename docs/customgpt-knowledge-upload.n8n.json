@@ -1,0 +1,194 @@
+{
+  "name": "CustomGPT Knowledge Base Upload",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Webhook: Add to CustomGPT",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [200, 300],
+      "webhookId": "customgpt-add-content",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "customgpt-add-content",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "id": "validate-input",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 300],
+      "parameters": {
+        "jsCode": "// Validate that required fields are present\nconst data = $input.first().json;\n\nif (!data.topic_id) {\n  throw new Error('Missing required field: topic_id');\n}\n\nif (!data.content) {\n  throw new Error('Missing required field: content');\n}\n\n// Clean and prepare content for upload\nconst cleanContent = data.content\n  .replace(/\\r\\n/g, '\\n')  // Normalize line endings\n  .trim();\n\nreturn [{\n  json: {\n    topic_id: data.topic_id,\n    topic: data.topic || 'Untitled',\n    category: data.category || 'General',\n    content: cleanContent,\n    approved_at: data.approved_at || new Date().toISOString(),\n    file_name: `${data.topic?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || data.topic_id}.md`\n  }\n}];"
+      }
+    },
+    {
+      "id": "get-customgpt-project",
+      "name": "Get CustomGPT Project Info",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [600, 300],
+      "parameters": {
+        "url": "=https://app.customgpt.ai/api/v1/projects/{{ $env.CUSTOMGPT_PROJECT_ID }}",
+        "method": "GET",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": { "httpHeaderAuth": { "id": "CUSTOMGPT_CREDENTIAL_ID", "name": "CustomGPT API" } }
+    },
+    {
+      "id": "prepare-file-upload",
+      "name": "Prepare File for Upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 300],
+      "parameters": {
+        "jsCode": "// Prepare content as a file for upload to CustomGPT\nconst validationData = $('Validate Input').first().json;\n\n// Create markdown file content with metadata header\nconst fileContent = `---\ntitle: ${validationData.topic}\ncategory: ${validationData.category}\napproved_at: ${validationData.approved_at}\nsource: Ecommpay Knowledge Pipeline\n---\n\n${validationData.content}`;\n\n// Convert to binary for file upload\nconst binaryData = Buffer.from(fileContent, 'utf-8');\n\nreturn [{\n  json: {\n    topic_id: validationData.topic_id,\n    topic: validationData.topic,\n    category: validationData.category,\n    file_name: validationData.file_name\n  },\n  binary: {\n    file: {\n      data: binaryData.toString('base64'),\n      mimeType: 'text/markdown',\n      fileName: validationData.file_name\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "upload-to-customgpt",
+      "name": "Upload to CustomGPT Sources",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1000, 300],
+      "parameters": {
+        "url": "=https://app.customgpt.ai/api/v1/projects/{{ $env.CUSTOMGPT_PROJECT_ID }}/sources",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "file",
+              "parameterType": "formBinaryData",
+              "inputDataFieldName": "file"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": { "httpHeaderAuth": { "id": "CUSTOMGPT_CREDENTIAL_ID", "name": "CustomGPT API" } }
+    },
+    {
+      "id": "check-upload-result",
+      "name": "Check Upload Result",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1200, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.data?.id || $json.id }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "trigger-reindex",
+      "name": "Trigger CustomGPT Reindex",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1400, 200],
+      "parameters": {
+        "url": "=https://app.customgpt.ai/api/v1/projects/{{ $env.CUSTOMGPT_PROJECT_ID }}/sources/{{ $json.data?.id || $json.id }}/reindex",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": { "httpHeaderAuth": { "id": "CUSTOMGPT_CREDENTIAL_ID", "name": "CustomGPT API" } }
+    },
+    {
+      "id": "update-topic-status",
+      "name": "Update Topic: Added to GPT",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1600, 200],
+      "parameters": {
+        "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $('Validate Input').first().json.topic_id }}",
+        "method": "PATCH",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"customgpt_source_id\": \"{{ $('Upload to CustomGPT Sources').first().json.data?.id || $('Upload to CustomGPT Sources').first().json.id }}\",\n  \"customgpt_added_at\": \"{{ new Date().toISOString() }}\"\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "success-response",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 200],
+      "parameters": {
+        "jsCode": "// Log successful upload\nconst validationData = $('Validate Input').first().json;\nconst uploadResponse = $('Upload to CustomGPT Sources').first().json;\n\nconsole.log(`Successfully added content to CustomGPT: ${validationData.topic}`);\n\nreturn [{\n  json: {\n    success: true,\n    topic_id: validationData.topic_id,\n    topic: validationData.topic,\n    customgpt_source_id: uploadResponse.data?.id || uploadResponse.id,\n    message: 'Content successfully added to CustomGPT knowledge base'\n  }\n}];"
+      }
+    },
+    {
+      "id": "handle-upload-error",
+      "name": "Handle Upload Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1400, 400],
+      "parameters": {
+        "jsCode": "// Log upload error\nconst validationData = $('Validate Input').first().json;\nconst uploadResponse = $('Upload to CustomGPT Sources').first().json;\n\nconsole.error(`Failed to upload to CustomGPT: ${validationData.topic}`);\nconsole.error('Response:', JSON.stringify(uploadResponse));\n\nthrow new Error(`Failed to upload ${validationData.topic} to CustomGPT: ${uploadResponse.error || 'Unknown error'}`);"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook: Add to CustomGPT": {
+      "main": [[{ "node": "Validate Input", "type": "main", "index": 0 }]]
+    },
+    "Validate Input": {
+      "main": [[{ "node": "Get CustomGPT Project Info", "type": "main", "index": 0 }]]
+    },
+    "Get CustomGPT Project Info": {
+      "main": [[{ "node": "Prepare File for Upload", "type": "main", "index": 0 }]]
+    },
+    "Prepare File for Upload": {
+      "main": [[{ "node": "Upload to CustomGPT Sources", "type": "main", "index": 0 }]]
+    },
+    "Upload to CustomGPT Sources": {
+      "main": [[{ "node": "Check Upload Result", "type": "main", "index": 0 }]]
+    },
+    "Check Upload Result": {
+      "main": [
+        [{ "node": "Trigger CustomGPT Reindex", "type": "main", "index": 0 }],
+        [{ "node": "Handle Upload Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Trigger CustomGPT Reindex": {
+      "main": [[{ "node": "Update Topic: Added to GPT", "type": "main", "index": 0 }]]
+    },
+    "Update Topic: Added to GPT": {
+      "main": [[{ "node": "Log Success", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "active": false,
+  "notes": "## CustomGPT Knowledge Base Upload Workflow\n\nThis workflow is triggered from the Ecommpay frontend when a user clicks 'Add to CustomGPT' on approved content.\n\n### Setup Requirements:\n1. Set environment variable `CUSTOMGPT_PROJECT_ID` to your CustomGPT project ID\n2. Create HTTP Header Auth credential for CustomGPT with:\n   - Header Name: `Authorization`\n   - Header Value: `Bearer YOUR_CUSTOMGPT_API_KEY`\n3. Activate the webhook and configure the URL in your app's .env file\n\n### API Reference:\n- CustomGPT API Docs: https://docs.customgpt.ai/\n- Sources endpoint: POST /api/v1/projects/{project_id}/sources"
+}
