@@ -9,7 +9,7 @@ const ALLOWED_KEYS = ['perplexity_system_prompt']
 // GET /api/settings/:key - Get a setting value
 router.get('/:key', async (req: Request, res: Response) => {
   try {
-    const { key } = req.params
+    const key = req.params.key as string
 
     if (!ALLOWED_KEYS.includes(key)) {
       return res.status(400).json({ error: 'Invalid setting key' })
@@ -34,7 +34,7 @@ router.get('/:key', async (req: Request, res: Response) => {
 // PUT /api/settings/:key - Update a setting value
 router.put('/:key', async (req: Request, res: Response) => {
   try {
-    const { key } = req.params
+    const key = req.params.key as string
     const { value } = req.body
 
     if (!ALLOWED_KEYS.includes(key)) {
