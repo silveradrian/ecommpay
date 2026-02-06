@@ -3,7 +3,8 @@ import multer from 'multer'
 import path from 'path'
 import fs from 'fs'
 import pool from '../db/index.js'
-import { generatePdf } from '../utils/pdf-generator.js'
+// pdf-generator is imported dynamically in the generate-pdf endpoint
+// to avoid crashing the entire router if pdfkit has loading issues
 
 const router = Router()
 
@@ -96,9 +97,10 @@ router.post('/:id/files', upload.fields([
       message: 'Files uploaded successfully',
       topic: result.rows[0]
     })
-  } catch (error) {
-    console.error('File upload error:', error)
-    res.status(500).json({ error: 'Failed to upload files' })
+  } catch (error: any) {
+    console.error('File upload error:', error?.message || error)
+    console.error('File upload stack:', error?.stack)
+    res.status(500).json({ error: 'Failed to upload files', detail: error?.message })
   }
 })
 
@@ -161,7 +163,8 @@ router.post('/:id/generate-pdf', async (req: Request, res: Response) => {
 
     const pdfPath = path.join(topicDir, 'content.pdf')
 
-    // Generate the branded PDF
+    // Dynamic import to isolate pdfkit loading from the rest of the router
+    const { generatePdf } = await import('../utils/pdf-generator.js')
     await generatePdf(pdfPath, {
       title: topic.topic,
       category: topic.category,
