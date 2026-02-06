@@ -406,7 +406,7 @@
           "parameters": [
             {
               "parameterType": "formBinaryData",
-              "name": "file",
+              "name": "md",
               "inputDataFieldName": "data"
             }
           ]
