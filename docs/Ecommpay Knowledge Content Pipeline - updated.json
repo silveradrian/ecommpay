@@ -1,0 +1,829 @@
+{
+  "name": "Ecommpay Knowledge Content Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Split the parsed outline into individual items — one per section + one for FAQs.\n// n8n will send each item to Perplexity in parallel.\nconst data = $input.first().json;\nconst sections = data.sections || [];\nconst faqs = data.faqs || [];\nconst keywords = data.target_keywords?.join(', ') || data.seo_enrichment?.keyword_suggestions?.slice(0,5).map(k => k.keyword).join(', ') || 'N/A';\nconst related = data.seo_enrichment?.related_searches?.join(', ') || 'N/A';\nconst items = [];\n\nfor (let i = 0; i < sections.length; i++) {\n  const s = sections[i];\n  items.push({\n    json: {\n      section_index: i,\n      section_type: 'section',\n      heading: s.heading,\n      prompt: `Write a detailed, well-researched section for a document titled \"${data.title}\".\\n\\nSection heading: ${s.heading}\\nSection description: ${s.description || ''}\\n\\nTarget keywords to incorporate naturally: ${keywords}\\nRelated topics to reference: ${related}\\n\\nWrite comprehensive markdown content for this section only. Use ## for the section heading. Be thorough and accurate.`,\n      // pass-through metadata\n      id: data.id,\n      topic: data.topic,\n      category: data.category,\n      priority: data.priority,\n      title: data.title,\n      seo_enrichment: data.seo_enrichment,\n      target_keywords: data.target_keywords\n    }\n  });\n}\n\nif (faqs.length > 0) {\n  const faqList = faqs.map((f, i) => `${i+1}. ${f.question}`).join('\\n');\n  items.push({\n    json: {\n      section_index: sections.length,\n      section_type: 'faqs',\n      heading: 'Frequently Asked Questions',\n      prompt: `Write a detailed FAQ section for a document titled \"${data.title}\".\\n\\nAnswer each of these questions thoroughly:\\n${faqList}\\n\\nTarget keywords to incorporate naturally: ${keywords}\\n\\nUse ### for each question heading. Provide comprehensive, accurate answers in markdown format.`,\n      id: data.id,\n      topic: data.topic,\n      category: data.category,\n      priority: data.priority,\n      title: data.title,\n      seo_enrichment: data.seo_enrichment,\n      target_keywords: data.target_keywords\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "02f404e0-65e8-4f7a-9018-482dfaf71495",
+      "name": "Split Sections",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3312,
+        2096
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get-live-google-keywords-for-keywords",
+        "input_mode": "json",
+        "keywords_for_keywords_json": "={{ [$('Update Status → In Progress').first().json.topic] }}",
+        "location_name": "United States",
+        "language_name": "English",
+        "date_from": {},
+        "date_to": {},
+        "sort_by": "search_volume"
+      },
+      "type": "n8n-nodes-dataforseo.dataForSeoKeywordsApi",
+      "typeVersion": 1,
+      "position": [
+        2528,
+        1632
+      ],
+      "id": "c3881625-28cb-48cb-8da5-19809497c4a8",
+      "name": "DataforSEO: Keyword Suggestions1",
+      "credentials": {
+        "dataForSeoApi": {
+          "id": "bvrVrMq5wsm5hBO5",
+          "name": "DataForSEO account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "id": "704b7082-c3fe-47ee-8520-8e5dd204d226",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        1536,
+        2016
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://ecommpay-grbzb.kinsta.app/api/topics",
+        "options": {}
+      },
+      "id": "eb5589cb-24ba-4154-921c-c304b97bd95f",
+      "name": "Fetch Topics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1744,
+        2016
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter for queued topics only\nconst allItems = $input.all();\nconst queuedItems = allItems.filter(item => item.json.status === 'Queued');\nreturn queuedItems;"
+      },
+      "id": "364a4ef1-a5e5-4025-bf54-26a5ffc29eec",
+      "name": "Filter Queued Topics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1936,
+        2016
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "id": "a0639e1b-ae73-4ad3-824a-93ca333344af"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a54837b9-f124-408a-8af7-a7f9947609c4",
+      "name": "Has Queued Topics?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2144,
+        2016
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $json.id }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "In Progress"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1b67cdfe-f2d2-4fbe-b464-90b5dd753a75",
+      "name": "Update Status → In Progress",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2304,
+        1808
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "options": {}
+      },
+      "id": "b1c2d3e4-f5a6-7890-abcd-waitforall01",
+      "name": "Wait For Both SEO",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        2688,
+        1840
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge keyword suggestions and People Also Ask data\nconst topicData = $('Update Status → In Progress').first().json;\nconst keywordResponse = $('DataforSEO: Keyword Suggestions1').first().json;\nconst paaResponse = $('DataforSEO: People Also Ask').first().json;\n\n// Extract keyword suggestions (Google Ads Keywords Data API format)\nlet keywords = [];\ntry {\n  const keywordItems = keywordResponse?.tasks?.[0]?.result?.[0]?.items || [];\n  keywords = keywordItems\n    .slice(0, 15)\n    .map(item => ({\n      keyword: item.keyword,\n      search_volume: item.search_volume || item.keyword_info?.search_volume || 0,\n      competition: item.competition || item.keyword_info?.competition || 'unknown',\n      cpc: item.cpc || item.keyword_info?.cpc || 0\n    }))\n    .sort((a, b) => b.search_volume - a.search_volume);\n} catch (e) {\n  console.log('Error parsing keywords:', e.message);\n}\n\n// Extract People Also Ask questions\nlet peopleAlsoAsk = [];\ntry {\n  const serpItems = paaResponse?.tasks?.[0]?.result?.[0]?.items || [];\n  const paaItems = serpItems.filter(item => item.type === 'people_also_ask');\n  \n  for (const paa of paaItems) {\n    if (paa.items) {\n      for (const q of paa.items.slice(0, 8)) {\n        peopleAlsoAsk.push({\n          question: q.title || q.question,\n          answer_snippet: q.snippet || null\n        });\n      }\n    }\n  }\n} catch (e) {\n  console.log('Error parsing PAA:', e.message);\n}\n\n// Extract related searches if available\nlet relatedSearches = [];\ntry {\n  const serpItems = paaResponse?.tasks?.[0]?.result?.[0]?.items || [];\n  const relatedItems = serpItems.filter(item => item.type === 'related_searches');\n  \n  for (const related of relatedItems) {\n    if (related.items) {\n      relatedSearches = related.items.slice(0, 10).map(r => r.title || r.query);\n    }\n  }\n} catch (e) {\n  console.log('Error parsing related searches:', e.message);\n}\n\nreturn [{\n  json: {\n    ...topicData,\n    seo_enrichment: {\n      keyword_suggestions: keywords,\n      people_also_ask: peopleAlsoAsk,\n      related_searches: relatedSearches\n    }\n  }\n}];"
+      },
+      "id": "183123bd-a892-40a1-a484-1da9911d785e",
+      "name": "Merge SEO Enrichment Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2848,
+        1840
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5.1",
+          "mode": "list",
+          "cachedResultName": "GPT-5.1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a document structure expert specializing in SEO-optimized content. Generate ONLY a JSON object with no additional text.\n\nThe JSON must have:\n- title (string): SEO-optimized title\n- sections (array of {heading, description}): Main content sections incorporating relevant keywords\n- faqs (array of {question}): Questions to answer, prioritizing People Also Ask questions\n- target_keywords (array of strings): Primary keywords to target"
+            },
+            {
+              "content": "=Create a comprehensive document outline for: \"{{ $json.topic }}\"\n\nCategory: {{ $json.category || 'General' }}\nPriority: {{ $json.priority }}\n\n--- SEO ENRICHMENT DATA ---\n\nKeyword Suggestions (by search volume):\n{{ $json.seo_enrichment.keyword_suggestions.map(k => `- ${k.keyword} (vol: ${k.search_volume}, competition: ${k.competition})`).join('\\n') || 'No keyword data available' }}\n\nPeople Also Ask Questions:\n{{ $json.seo_enrichment.people_also_ask.map(p => `- ${p.question}`).join('\\n') || 'No PAA data available' }}\n\nRelated Searches:\n{{ $json.seo_enrichment.related_searches.join(', ') || 'No related searches' }}\n\n--- INSTRUCTIONS ---\n1. Use high-volume keywords in section headings where natural\n2. Include ALL People Also Ask questions in the FAQs section\n3. Structure sections to comprehensively cover the topic and related keywords\n4. Return ONLY valid JSON, no markdown or explanation"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "8c88e23a-711c-41e7-80e7-2554c3cf3896",
+      "name": "Build Document Outline (GPT-4)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.4,
+      "position": [
+        3024,
+        1760
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "QvxFiJIHvzog4XkB",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the GPT response and extract JSON outline with SEO data\nconst response = $input.first().json;\nconst enrichedData = $('Merge SEO Enrichment Data').first().json;\n\nlet outline;\ntry {\n  // Try to parse the response content\n  const content = response.message?.content || response.choices?.[0]?.message?.content || JSON.stringify(response);\n  // Extract JSON from response (handle markdown code blocks)\n  const jsonMatch = content.match(/```json\\n?([\\s\\S]*?)\\n?```/) || content.match(/\\{[\\s\\S]*\\}/);\n  outline = JSON.parse(jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content);\n} catch (e) {\n  // Fallback outline using SEO data\n  const paaQuestions = enrichedData.seo_enrichment?.people_also_ask || [];\n  outline = {\n    title: enrichedData.topic,\n    sections: [{ heading: 'Overview', description: 'Main content' }],\n    faqs: paaQuestions.map(p => ({ question: p.question })),\n    target_keywords: []\n  };\n}\n\nreturn [{\n  json: {\n    ...enrichedData,\n    outline: outline,\n    title: outline.title || enrichedData.topic,\n    sections: outline.sections || [],\n    faqs: outline.faqs || [],\n    target_keywords: outline.target_keywords || []\n  }\n}];"
+      },
+      "id": "74c54e7b-1e51-4dc8-861a-612be47f759c",
+      "name": "Parse Outline JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3168,
+        2096
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\"model\": \"sonar-pro\", \"messages\": [{\"role\": \"system\", \"content\": $('Fetch System Prompt').first().json.value}, {\"role\": \"user\", \"content\": $json.prompt}], \"temperature\": 0.3, \"max_tokens\": 4000}) }}",
+        "options": {}
+      },
+      "id": "9aa50255-6103-4575-bcd5-711bf2379418",
+      "name": "Generate Content (Perplexity)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        3456,
+        2096
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "grwwsA1jUhblkKdS",
+          "name": "Bearer Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Assemble the final markdown document from parallel Perplexity responses.\n// Each input item is one section's Perplexity response (items arrive in order).\nconst allItems = $input.all();\nconst topicData = $('Parse Outline JSON').first().json;\nconst splitItems = $('Split Sections').all();\n\nconst title = topicData.title || topicData.topic;\nlet md = `# ${title}\\n\\n`;\n\n// Merge each section's generated content in order\nfor (let i = 0; i < allItems.length; i++) {\n  try {\n    const content = allItems[i].json.choices?.[0]?.message?.content || '';\n    if (content) {\n      md += content.trim() + '\\n\\n';\n    } else {\n      // Fallback: use heading from split item\n      const heading = splitItems[i]?.json?.heading || `Section ${i + 1}`;\n      md += `## ${heading}\\n\\nContent pending.\\n\\n`;\n    }\n  } catch (e) {\n    md += `## Section ${i + 1}\\n\\nContent generation failed.\\n\\n`;\n  }\n}\n\n// Add SEO metadata section\nconst seoData = topicData.seo_enrichment || {};\nif (seoData.keyword_suggestions?.length || seoData.related_searches?.length) {\n  md += '---\\n\\n## SEO Metadata\\n\\n';\n  if (topicData.target_keywords?.length) {\n    md += `**Target Keywords:** ${topicData.target_keywords.join(', ')}\\n\\n`;\n  }\n  if (seoData.keyword_suggestions?.length) {\n    md += '**Related Keywords:**\\n';\n    for (const kw of seoData.keyword_suggestions.slice(0, 10)) {\n      md += `- ${kw.keyword} (Search Vol: ${kw.search_volume})\\n`;\n    }\n    md += '\\n';\n  }\n  if (seoData.related_searches?.length) {\n    md += `**Related Searches:** ${seoData.related_searches.join(', ')}\\n\\n`;\n  }\n}\n\nmd += `---\\n\\n*Generated on ${new Date().toISOString().split('T')[0]} | SEO-optimized content*\\n`;\n\nreturn [{\n  json: {\n    id: topicData.id,\n    topic: topicData.topic,\n    category: topicData.category,\n    priority: topicData.priority,\n    title: title,\n    draft_markdown: md,\n    seo_enrichment: seoData\n  }\n}];"
+      },
+      "id": "cdd9abcb-2c8a-4d80-b5fd-9bb4fe039c9d",
+      "name": "Assemble Draft Document",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3728,
+        2096
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $json.id }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "In Review"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1fb00d6f-1e0f-4453-96e3-d32ac26cc332",
+      "name": "Update Status → In Review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        3744,
+        2528
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "approved",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "rejected",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "63092ce8-c3d7-4aca-b62a-bdaf640c681b",
+      "name": "Approved or Rejected?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        4288,
+        2080
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $('Review Content1').item.json.metadata.topic_id }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "Approved"
+            },
+            {
+              "name": "approved_content",
+              "value": "={{ $('Send review request and wait for response1').item.json.responseValues.markdown.value }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "603d5080-9444-4740-9e44-ba313760c6de",
+      "name": "Update Status → Approved",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        4480,
+        1984
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $('Review Content1').item.json.metadata.topic_id }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "Rejected"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "be0528aa-5691-4f37-9669-6455c00263c5",
+      "name": "Update Status → Rejected",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        4480,
+        2176
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convert markdown content to binary for file upload\nconst data = $input.first().json;\nconst markdown = data.approved_content || data.content || \"\";\nconst topicId = data.id || data.topic_id;\n\n// Create binary data from markdown string\nconst binaryData = Buffer.from(markdown, 'utf-8');\n\nreturn [{\n  json: {\n    topic_id: topicId\n  },\n  binary: {\n    data: {\n      data: binaryData.toString('base64'),\n      mimeType: 'text/markdown',\n      fileName: `topic_${topicId}.md`\n    }\n  }\n}];"
+      },
+      "id": "745760a7-3889-44c6-8c7a-21957c509eaf",
+      "name": "Convert MD to Binary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4688,
+        1984
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $json.topic_id }}/files",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9809948a-25db-43f0-bad0-7f349547bd13",
+      "name": "Upload MD File",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        4880,
+        1984
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "614c10db-c3a5-4299-a53b-9b38765cb44d",
+      "name": "No Queued Topics",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2336,
+        2224
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $json.id }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "Queued"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f59edc02-392d-42c4-a4db-4c66604f91ba",
+      "name": "Error: Reset to Queued",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2736,
+        2224
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get-live-google-organic-serp-advanced",
+        "keyword": "={{ $('Update Status → In Progress').first().json.topic }}",
+        "location_name": "United States",
+        "language_name": "English",
+        "depth": 10,
+        "group_organic_results": false,
+        "max_crawl_pages": {},
+        "browser_screen_width": {},
+        "browser_screen_height": {},
+        "browser_screen_resolution_ratio": {},
+        "people_also_ask_click_depth": 2,
+        "remove_from_url": {
+          "values": []
+        }
+      },
+      "type": "n8n-nodes-dataforseo.dataForSeoSerpApi",
+      "typeVersion": 1,
+      "position": [
+        2528,
+        1984
+      ],
+      "id": "fad49406-6485-45ae-9445-ee4de4ef320f",
+      "name": "DataforSEO: People Also Ask",
+      "credentials": {
+        "dataForSeoApi": {
+          "id": "bvrVrMq5wsm5hBO5",
+          "name": "DataForSEO account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    title: `Review: ${$json.topic}`,\n    description: \"Please review the generated content for accuracy and quality.\",\n    content: $json.draft_markdown,\n    metadata: {\n      topic_id: $json.id,\n      category: $json.category,\n      priority: $json.priority\n    },\n    callback_url: \"YOUR_N8N_WEBHOOK_URL\"\n  }\n}];\n"
+      },
+      "id": "6b0ceb9b-746c-46f6-85bd-6c2bb598d0ec",
+      "name": "Review Content1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3920,
+        2528
+      ]
+    },
+    {
+      "parameters": {
+        "reviewTemplateID": {
+          "__rl": true,
+          "value": "FegEaspVaKyiU4S6TN55",
+          "mode": "list",
+          "cachedResultName": "Ecompay Content Approval (FegEaspVaKyiU4S6TN55)"
+        },
+        "fields": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "markdown": "={{ $('Assemble Draft Document').item.json.draft_markdown }}"
+          },
+          "matchingColumns": [
+            "text"
+          ],
+          "schema": [
+            {
+              "type": "string",
+              "id": "markdown",
+              "displayName": "markdown (markdown)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "additionalFields": {}
+      },
+      "type": "@gotohuman/n8n-nodes-gotohuman.gotoHuman",
+      "typeVersion": 1,
+      "position": [
+        4080,
+        2528
+      ],
+      "id": "676fa0f2-12cb-4069-8388-bbd1cbd6c34e",
+      "name": "Send review request and wait for response1",
+      "webhookId": "12d5ba83-ead1-459b-b4e0-7b6899e0f662",
+      "credentials": {
+        "gotoHumanApi": {
+          "id": "EQZKVPh3rEWOt6ZK",
+          "name": "gotoHuman account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://ecommpay-grbzb.kinsta.app/api/settings/perplexity_system_prompt",
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-fetchprompt01",
+      "name": "Fetch System Prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2528,
+        2256
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Split Sections": {
+      "main": [
+        [
+          {
+            "node": "Generate Content (Perplexity)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DataforSEO: Keyword Suggestions1": {
+      "main": [
+        [
+          {
+            "node": "Wait For Both SEO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait For Both SEO": {
+      "main": [
+        [
+          {
+            "node": "Merge SEO Enrichment Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Topics": {
+      "main": [
+        [
+          {
+            "node": "Filter Queued Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Queued Topics": {
+      "main": [
+        [
+          {
+            "node": "Has Queued Topics?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Queued Topics?": {
+      "main": [
+        [
+          {
+            "node": "Update Status → In Progress",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Queued Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status → In Progress": {
+      "main": [
+        [
+          {
+            "node": "DataforSEO: Keyword Suggestions1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "DataforSEO: People Also Ask",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch System Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge SEO Enrichment Data": {
+      "main": [
+        [
+          {
+            "node": "Build Document Outline (GPT-4)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Document Outline (GPT-4)": {
+      "main": [
+        [
+          {
+            "node": "Parse Outline JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Outline JSON": {
+      "main": [
+        [
+          {
+            "node": "Split Sections",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Content (Perplexity)": {
+      "main": [
+        [
+          {
+            "node": "Assemble Draft Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assemble Draft Document": {
+      "main": [
+        [
+          {
+            "node": "Update Status → In Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status → In Review": {
+      "main": [
+        [
+          {
+            "node": "Review Content1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved or Rejected?": {
+      "main": [
+        [
+          {
+            "node": "Update Status → Approved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Status → Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status → Approved": {
+      "main": [
+        [
+          {
+            "node": "Convert MD to Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert MD to Binary": {
+      "main": [
+        [
+          {
+            "node": "Upload MD File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DataforSEO: People Also Ask": {
+      "main": [
+        [
+          {
+            "node": "Wait For Both SEO",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Review Content1": {
+      "main": [
+        [
+          {
+            "node": "Send review request and wait for response1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send review request and wait for response1": {
+      "main": [
+        [
+          {
+            "node": "Approved or Rejected?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "c9371ddc-24c5-41ea-8173-7a4e170452be",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b81aa45f0c6bd86c9bed7de4203fc1b3e47dcf75141b5df3b3bd30232888b9fb"
+  },
+  "id": "Fwma902UnxUm1Pa2-wi3I",
+  "tags": []
+}

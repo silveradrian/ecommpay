@@ -24,13 +24,21 @@ function Header() {
           >
             Dashboard
           </NavLink>
-          <NavLink 
-            to="/submit" 
-            className={({ isActive }) => 
+          <NavLink
+            to="/submit"
+            className={({ isActive }) =>
               `${styles.navLink} ${isActive ? styles.active : ''}`
             }
           >
             Submit Topic
+          </NavLink>
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              `${styles.navLink} ${isActive ? styles.active : ''}`
+            }
+          >
+            Settings
           </NavLink>
         </nav>
       </div>

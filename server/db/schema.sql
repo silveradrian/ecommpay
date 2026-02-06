@@ -29,6 +29,19 @@ BEGIN
     END IF;
 END $$;
 
+-- Settings table (key-value store for app configuration)
+CREATE TABLE IF NOT EXISTS settings (
+    key VARCHAR(100) PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Seed default settings
+INSERT INTO settings (key, value) VALUES (
+    'perplexity_system_prompt',
+    'You are an expert SEO content writer. Write detailed, accurate, and engaging content optimized for search engines. Use markdown formatting. Naturally incorporate target keywords without keyword stuffing.'
+) ON CONFLICT (key) DO NOTHING;
+
 -- Index for faster status filtering
 CREATE INDEX IF NOT EXISTS idx_topics_status ON topics(status);
 

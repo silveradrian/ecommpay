@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
 import topicsRouter from './routes/topics.js'
 import filesRouter from './routes/files.js'
+import settingsRouter from './routes/settings.js'
 
 // ES module __dirname equivalent
 const __filename = fileURLToPath(import.meta.url)
@@ -23,6 +24,7 @@ app.use(express.json({ limit: '10mb' }))
 // API Routes
 app.use('/api/topics', topicsRouter)
 app.use('/api/topics', filesRouter)
+app.use('/api/settings', settingsRouter)
 
 // Health check endpoint
 app.get('/api/health', (_, res) => {

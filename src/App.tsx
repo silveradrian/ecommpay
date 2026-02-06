@@ -3,6 +3,7 @@ import Layout from './components/Layout'
 import TopicIntake from './pages/TopicIntake'
 import TopicDashboard from './pages/TopicDashboard'
 import ContentView from './pages/ContentView'
+import Settings from './pages/Settings'
 
 function App() {
   return (
@@ -11,6 +12,7 @@ function App() {
         <Route index element={<TopicDashboard />} />
         <Route path="submit" element={<TopicIntake />} />
         <Route path="content/:id" element={<ContentView />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
   )

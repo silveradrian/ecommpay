@@ -24,31 +24,19 @@ const poolConfig = connectionString
 const pool = new Pool(poolConfig)
 
 // Auto-initialize database schema on startup
+// Always runs schema.sql — all statements are idempotent (IF NOT EXISTS, ON CONFLICT DO NOTHING, etc.)
 async function initializeDatabase() {
   try {
-    // Check if topics table exists
-    const tableCheck = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables
-        WHERE table_name = 'topics'
-      )
-    `)
+    console.log('Running database schema (idempotent)...')
 
-    if (!tableCheck.rows[0].exists) {
-      console.log('Initializing database schema...')
+    const __filename = fileURLToPath(import.meta.url)
+    const __dirname = dirname(__filename)
 
-      // Get the directory path for ES modules
-      const __filename = fileURLToPath(import.meta.url)
-      const __dirname = dirname(__filename)
+    const schemaPath = join(__dirname, 'schema.sql')
+    const schema = readFileSync(schemaPath, 'utf-8')
 
-      const schemaPath = join(__dirname, 'schema.sql')
-      const schema = readFileSync(schemaPath, 'utf-8')
-
-      await pool.query(schema)
-      console.log('✓ Database schema initialized')
-    } else {
-      console.log('✓ Database connected (schema exists)')
-    }
+    await pool.query(schema)
+    console.log('✓ Database schema up to date')
   } catch (err) {
     console.error('✗ Database initialization error:', err instanceof Error ? err.message : err)
   }
