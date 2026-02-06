@@ -117,6 +117,26 @@ router.patch('/:id', async (req: Request, res: Response) => {
   }
 })
 
+// DELETE /api/topics/:id - Delete a topic
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const result = await pool.query(
+      'DELETE FROM topics WHERE id = $1 RETURNING id, topic',
+      [id]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Topic not found' })
+    }
+
+    res.json({ success: true, deleted: result.rows[0] })
+  } catch (error) {
+    console.error('Error deleting topic:', error)
+    res.status(500).json({ error: 'Failed to delete topic' })
+  }
+})
+
 // POST /api/topics/:id/add-to-customgpt - Trigger n8n workflow to add content to customGPT
 router.post('/:id/add-to-customgpt', async (req: Request, res: Response) => {
   try {

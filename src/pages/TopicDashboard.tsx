@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchTopics, Topic } from '../api/topics'
+import { fetchTopics, deleteTopic, Topic } from '../api/topics'
 import styles from './TopicDashboard.module.css'
 
 type TopicStatus = 'Queued' | 'In Progress' | 'In Review' | 'Approved' | 'Rejected'
@@ -30,6 +30,8 @@ function TopicDashboard() {
   const [topics, setTopics] = useState<Topic[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     loadTopics()
@@ -45,6 +47,19 @@ function TopicDashboard() {
       setError(err instanceof Error ? err.message : 'Failed to load topics')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      setDeleting(true)
+      await deleteTopic(id)
+      setTopics(prev => prev.filter(t => t.id !== id))
+      setConfirmDeleteId(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete topic')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -87,11 +102,38 @@ function TopicDashboard() {
                     </span>
                   </td>
                   <td className={styles.date}>{formatDate(topic.updated_at)}</td>
-                  <td>
+                  <td className={styles.actions}>
                     {topic.status === 'Approved' && (
                       <Link to={`/content/${topic.id}`} className={styles.viewLink}>
                         View Content
                       </Link>
+                    )}
+                    {confirmDeleteId === topic.id ? (
+                      <span className={styles.confirmDelete}>
+                        <span className={styles.confirmText}>Delete?</span>
+                        <button
+                          className={styles.confirmYes}
+                          onClick={() => handleDelete(topic.id)}
+                          disabled={deleting}
+                        >
+                          {deleting ? '...' : 'Yes'}
+                        </button>
+                        <button
+                          className={styles.confirmNo}
+                          onClick={() => setConfirmDeleteId(null)}
+                          disabled={deleting}
+                        >
+                          No
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        className={styles.deleteButton}
+                        onClick={() => setConfirmDeleteId(topic.id)}
+                        title="Delete topic"
+                      >
+                        ✕
+                      </button>
                     )}
                   </td>
                 </tr>

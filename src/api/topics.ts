@@ -67,6 +67,20 @@ export async function createTopic(data: CreateTopicData): Promise<Topic> {
   return response.json()
 }
 
+// Delete a topic
+export async function deleteTopic(id: string): Promise<{ success: boolean }> {
+  const response = await fetch(`${API_BASE}/topics/${id}`, {
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to delete topic' }))
+    throw new Error(error.error || 'Failed to delete topic')
+  }
+
+  return response.json()
+}
+
 // Add approved content to customGPT knowledge base
 export async function addToCustomGPT(topicId: string): Promise<{ success: boolean; message: string }> {
   const response = await fetch(`${API_BASE}/topics/${topicId}/add-to-customgpt`, {

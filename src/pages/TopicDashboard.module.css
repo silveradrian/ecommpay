@@ -97,6 +97,12 @@
   color: white;
 }
 
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
 .viewLink {
   color: var(--color-gradient-end);
   font-weight: 500;
@@ -105,6 +111,75 @@
 
 .viewLink:hover {
   color: var(--color-gradient-start);
+}
+
+.deleteButton {
+  background: none;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--color-status-rejected);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-default);
+  cursor: pointer;
+  font-size: var(--text-small);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  opacity: 0.6;
+}
+
+.deleteButton:hover {
+  opacity: 1;
+  background: rgba(239, 68, 68, 0.15);
+  border-color: var(--color-status-rejected);
+}
+
+.confirmDelete {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.confirmText {
+  color: var(--color-status-rejected);
+  font-size: var(--text-small);
+  font-weight: 500;
+}
+
+.confirmYes,
+.confirmNo {
+  border: none;
+  padding: 2px 10px;
+  border-radius: var(--radius-default);
+  font-size: var(--text-small);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.confirmYes {
+  background: var(--color-status-rejected);
+  color: white;
+}
+
+.confirmYes:hover {
+  background: #dc2626;
+}
+
+.confirmYes:disabled,
+.confirmNo:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confirmNo {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-secondary);
+}
+
+.confirmNo:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .loading,
