@@ -137,60 +137,94 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 })
 
-// POST /api/topics/:id/add-to-customgpt - Trigger n8n workflow to add content to customGPT
+// POST /api/topics/:id/add-to-customgpt - Upload approved content to CustomGPT (Savi) knowledge base
 router.post('/:id/add-to-customgpt', async (req: Request, res: Response) => {
   try {
     const { id } = req.params
-    
-    // Fetch the topic to get approved content
-    const result = await pool.query(
-      'SELECT * FROM topics WHERE id = $1',
-      [id]
-    )
-    
+
+    // Validate environment variables
+    const apiKey = process.env.CUSTOMGPT_API
+    const projectId = process.env.CUSTOMGPT_PROJECT_ID
+
+    if (!apiKey || !projectId) {
+      console.error('CUSTOMGPT_API or CUSTOMGPT_PROJECT_ID not configured')
+      return res.status(500).json({ error: 'Savi integration not configured' })
+    }
+
+    // Fetch the topic
+    const result = await pool.query('SELECT * FROM topics WHERE id = $1', [id])
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Topic not found' })
     }
-    
+
     const topic = result.rows[0]
-    
+
     if (topic.status !== 'Approved' || !topic.approved_content) {
-      return res.status(400).json({ error: 'Topic must be approved with content before adding to customGPT' })
+      return res.status(400).json({ error: 'Topic must be approved with content before submitting to Savi' })
     }
-    
-    // Get n8n webhook URL from environment
-    const n8nWebhookUrl = process.env.N8N_CUSTOMGPT_WEBHOOK_URL
-    
-    if (!n8nWebhookUrl) {
-      console.error('N8N_CUSTOMGPT_WEBHOOK_URL not configured')
-      return res.status(500).json({ error: 'CustomGPT integration not configured' })
-    }
-    
-    // Trigger n8n workflow via webhook
-    const webhookResponse = await fetch(n8nWebhookUrl, {
+
+    // Build markdown file with metadata header
+    const fileName = `${topic.topic.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase().slice(0, 80)}.md`
+    const fileContent = `---
+title: ${topic.topic}
+category: ${topic.category || 'Uncategorized'}
+approved_at: ${topic.approved_at || new Date().toISOString()}
+source: Ecommpay Knowledge Pipeline
+---
+
+${topic.approved_content}`
+
+    // Upload to CustomGPT Sources as multipart/form-data
+    const formData = new FormData()
+    formData.append('file', new Blob([fileContent], { type: 'text/markdown' }), fileName)
+
+    const uploadUrl = `https://app.customgpt.ai/api/v1/projects/${projectId}/sources`
+    console.log(`Uploading to CustomGPT: ${fileName}`)
+
+    const uploadResponse = await fetch(uploadUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        topic_id: topic.id,
-        topic: topic.topic,
-        category: topic.category,
-        content: topic.approved_content,
-        approved_at: topic.approved_at,
-      }),
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+      body: formData,
     })
-    
-    if (!webhookResponse.ok) {
-      const errorText = await webhookResponse.text()
-      console.error('n8n webhook error:', errorText)
-      return res.status(500).json({ error: 'Failed to trigger customGPT workflow' })
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text()
+      console.error('CustomGPT upload error:', uploadResponse.status, errorText)
+      return res.status(502).json({ error: 'Failed to upload content to Savi' })
     }
-    
-    res.json({ success: true, message: 'Content queued for addition to customGPT knowledge base' })
+
+    const uploadData = await uploadResponse.json()
+    const sourceId = uploadData.data?.id || uploadData.id
+
+    if (!sourceId) {
+      console.error('CustomGPT upload returned no source ID:', JSON.stringify(uploadData))
+      return res.status(502).json({ error: 'Savi upload succeeded but returned no source ID' })
+    }
+
+    console.log(`CustomGPT upload success, source ID: ${sourceId}`)
+
+    // Trigger reindex for reliability
+    try {
+      const reindexUrl = `https://app.customgpt.ai/api/v1/projects/${projectId}/sources/${sourceId}/reindex`
+      await fetch(reindexUrl, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+      })
+    } catch (reindexErr) {
+      console.warn('Reindex request failed (non-critical):', reindexErr)
+    }
+
+    // Update database with source ID and timestamp
+    await pool.query(
+      'UPDATE topics SET customgpt_source_id = $1, customgpt_added_at = NOW() WHERE id = $2',
+      [String(sourceId), id]
+    )
+
+    res.json({ success: true, message: 'Content added to Savi knowledge base' })
   } catch (error) {
-    console.error('Error adding to customGPT:', error)
-    res.status(500).json({ error: 'Failed to add to customGPT' })
+    console.error('Error adding to Savi:', error)
+    res.status(500).json({ error: 'Failed to add to Savi' })
   }
 })
 
