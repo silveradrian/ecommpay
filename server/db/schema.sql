@@ -18,9 +18,15 @@ CREATE TABLE IF NOT EXISTS topics (
     approved_at TIMESTAMP WITH TIME ZONE
 );
 
--- Migration: Add customgpt columns if they don't exist
-DO $$ 
+-- Migration: Add columns if they don't exist (for databases created before these were added)
+DO $$
 BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'topics' AND column_name = 'md_file_path') THEN
+        ALTER TABLE topics ADD COLUMN md_file_path VARCHAR(500);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'topics' AND column_name = 'pdf_file_path') THEN
+        ALTER TABLE topics ADD COLUMN pdf_file_path VARCHAR(500);
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'topics' AND column_name = 'customgpt_source_id') THEN
         ALTER TABLE topics ADD COLUMN customgpt_source_id VARCHAR(100);
     END IF;
