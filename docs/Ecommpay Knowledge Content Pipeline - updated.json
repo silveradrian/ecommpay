@@ -146,6 +146,7 @@
     {
       "parameters": {
         "mode": "append",
+        "numberInputs": 3,
         "options": {}
       },
       "id": "b1c2d3e4-f5a6-7890-abcd-waitforall01",
@@ -786,6 +787,17 @@
             "node": "Wait For Both SEO",
             "type": "main",
             "index": 1
+          }
+        ]
+      ]
+    },
+    "Fetch System Prompt": {
+      "main": [
+        [
+          {
+            "node": "Wait For Both SEO",
+            "type": "main",
+            "index": 2
           }
         ]
       ]
