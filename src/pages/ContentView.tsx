@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { fetchTopic, addToCustomGPT, generateTopicPdf, Topic } from '../api/topics'
+import { fetchTopic, addToSavi, generateTopicPdf, Topic } from '../api/topics'
 import styles from './ContentView.module.css'
 
 function ContentView() {
@@ -9,8 +9,8 @@ function ContentView() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const [addingToGPT, setAddingToGPT] = useState(false)
-  const [gptStatus, setGptStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [addingToSavi, setAddingToSavi] = useState(false)
+  const [saviStatus, setSaviStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [pdfStatus, setPdfStatus] = useState<'idle' | 'success' | 'error'>('idle')
 
@@ -76,20 +76,20 @@ function ContentView() {
     }
   }
 
-  const handleAddToCustomGPT = async () => {
-    if (!topic?.id || addingToGPT) return
+  const handleAddToSavi = async () => {
+    if (!topic?.id || addingToSavi) return
     try {
-      setAddingToGPT(true)
-      setGptStatus('idle')
-      await addToCustomGPT(topic.id)
-      setGptStatus('success')
-      setTimeout(() => setGptStatus('idle'), 3000)
+      setAddingToSavi(true)
+      setSaviStatus('idle')
+      await addToSavi(topic.id)
+      setSaviStatus('success')
+      setTimeout(() => setSaviStatus('idle'), 3000)
     } catch (err) {
-      console.error('Failed to add to customGPT:', err)
-      setGptStatus('error')
-      setTimeout(() => setGptStatus('idle'), 3000)
+      console.error('Failed to add to Savi:', err)
+      setSaviStatus('error')
+      setTimeout(() => setSaviStatus('idle'), 3000)
     } finally {
-      setAddingToGPT(false)
+      setAddingToSavi(false)
     }
   }
 
@@ -158,19 +158,21 @@ function ContentView() {
             {generatingPdf ? 'Generating...' : pdfStatus === 'success' ? '✓ PDF Generated' : pdfStatus === 'error' ? '✕ Failed' : '📄 Generate PDF'}
           </button>
           {topic.customgpt_source_id ? (
-            <span className={`${styles.actionButton} ${styles.gptButton} ${styles.alreadyAdded}`}>
-              ✓ In CustomGPT
+            <span className={`${styles.actionButton} ${styles.saviButton} ${styles.alreadyAdded}`}>
+              <img src="/img/Savi_logo_Savi_Colour reversed.png" alt="" className={styles.saviIcon} />
+              ✓ In Savi
               {topic.customgpt_added_at && (
-                <span className={styles.gptDate}> ({formatDate(topic.customgpt_added_at)})</span>
+                <span className={styles.saviDate}> ({formatDate(topic.customgpt_added_at)})</span>
               )}
             </span>
           ) : (
-            <button 
-              onClick={handleAddToCustomGPT} 
-              className={`${styles.actionButton} ${styles.gptButton} ${gptStatus === 'success' ? styles.success : ''} ${gptStatus === 'error' ? styles.errorState : ''}`}
-              disabled={addingToGPT}
+            <button
+              onClick={handleAddToSavi}
+              className={`${styles.actionButton} ${styles.saviButton} ${saviStatus === 'success' ? styles.success : ''} ${saviStatus === 'error' ? styles.errorState : ''}`}
+              disabled={addingToSavi}
             >
-              {addingToGPT ? 'Adding...' : gptStatus === 'success' ? '✓ Added to GPT' : gptStatus === 'error' ? '✕ Failed' : '🤖 Add to CustomGPT'}
+              <img src="/img/Savi_logo_Savi_Colour reversed.png" alt="" className={styles.saviIcon} />
+              {addingToSavi ? 'Adding...' : saviStatus === 'success' ? '✓ Added to Savi' : saviStatus === 'error' ? '✕ Failed' : 'Submit to Savi'}
             </button>
           )}
         </div>

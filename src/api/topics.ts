@@ -98,20 +98,20 @@ export async function generateTopicPdf(topicId: string): Promise<{ message: stri
   return response.json()
 }
 
-// Add approved content to customGPT knowledge base
-export async function addToCustomGPT(topicId: string): Promise<{ success: boolean; message: string }> {
+// Add approved content to Savi knowledge base
+export async function addToSavi(topicId: string): Promise<{ success: boolean; message: string }> {
   const response = await fetch(`${API_BASE}/topics/${topicId}/add-to-customgpt`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
   })
-  
+
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to add to customGPT' }))
-    throw new Error(error.error || 'Failed to add to customGPT')
+    const error = await response.json().catch(() => ({ error: 'Failed to add to Savi' }))
+    throw new Error(error.error || 'Failed to add to Savi')
   }
-  
+
   return response.json()
 }
 

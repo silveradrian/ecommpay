@@ -158,41 +158,49 @@
   border-color: #ef4444;
 }
 
-/* CustomGPT button styles */
-.gptButton {
-  background: linear-gradient(135deg, #10a37f, #1a7f5a);
-  border-color: #10a37f;
+/* Savi button styles */
+.saviButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: linear-gradient(135deg, #C137A2, #FF6A00);
+  border-color: #C137A2;
 }
 
-.gptButton:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1a7f5a, #10a37f);
-  border-color: #1a7f5a;
-  box-shadow: 0 4px 12px rgba(16, 163, 127, 0.3);
+.saviButton:hover:not(:disabled) {
+  background: linear-gradient(135deg, #FF6A00, #C137A2);
+  border-color: #FF6A00;
+  box-shadow: 0 4px 12px rgba(193, 55, 162, 0.3);
 }
 
-.gptButton:disabled {
+.saviButton:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
-.gptButton.success {
-  background: linear-gradient(135deg, #10a37f, #059669);
-  border-color: #10a37f;
+.saviButton.success {
+  background: linear-gradient(135deg, #10B981, #059669);
+  border-color: #10B981;
 }
 
-.gptButton.errorState {
+.saviButton.errorState {
   background: linear-gradient(135deg, #ef4444, #dc2626);
   border-color: #ef4444;
 }
 
-.gptButton.alreadyAdded {
-  background: rgba(16, 163, 127, 0.2);
-  border-color: #10a37f;
+.saviButton.alreadyAdded {
+  background: rgba(193, 55, 162, 0.2);
+  border-color: #C137A2;
   cursor: default;
   opacity: 0.9;
 }
 
-.gptDate {
+.saviIcon {
+  height: 16px;
+  width: auto;
+}
+
+.saviDate {
   font-size: var(--text-caption);
   opacity: 0.8;
 }
