@@ -81,6 +81,23 @@ export async function deleteTopic(id: string): Promise<{ success: boolean }> {
   return response.json()
 }
 
+// Generate branded PDF from approved content
+export async function generateTopicPdf(topicId: string): Promise<{ message: string; topic: Topic }> {
+  const response = await fetch(`${API_BASE}/topics/${topicId}/generate-pdf`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to generate PDF' }))
+    throw new Error(error.error || 'Failed to generate PDF')
+  }
+
+  return response.json()
+}
+
 // Add approved content to customGPT knowledge base
 export async function addToCustomGPT(topicId: string): Promise<{ success: boolean; message: string }> {
   const response = await fetch(`${API_BASE}/topics/${topicId}/add-to-customgpt`, {

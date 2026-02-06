@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { fetchTopic, addToCustomGPT, Topic } from '../api/topics'
+import { fetchTopic, addToCustomGPT, generateTopicPdf, Topic } from '../api/topics'
 import styles from './ContentView.module.css'
 
 function ContentView() {
@@ -11,6 +11,8 @@ function ContentView() {
   const [copied, setCopied] = useState(false)
   const [addingToGPT, setAddingToGPT] = useState(false)
   const [gptStatus, setGptStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [pdfStatus, setPdfStatus] = useState<'idle' | 'success' | 'error'>('idle')
 
   useEffect(() => {
     if (id) {
@@ -53,6 +55,25 @@ function ContentView() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+  }
+
+  const handleGeneratePdf = async () => {
+    if (!topic?.id || generatingPdf) return
+    try {
+      setGeneratingPdf(true)
+      setPdfStatus('idle')
+      await generateTopicPdf(topic.id)
+      // Reload topic to get updated pdf_file_path
+      if (id) await loadTopic(id)
+      setPdfStatus('success')
+      setTimeout(() => setPdfStatus('idle'), 3000)
+    } catch (err) {
+      console.error('Failed to generate PDF:', err)
+      setPdfStatus('error')
+      setTimeout(() => setPdfStatus('idle'), 3000)
+    } finally {
+      setGeneratingPdf(false)
+    }
   }
 
   const handleAddToCustomGPT = async () => {
@@ -128,6 +149,13 @@ function ContentView() {
           </button>
           <button onClick={handleExport} className={styles.actionButton}>
             Export
+          </button>
+          <button
+            onClick={handleGeneratePdf}
+            className={`${styles.actionButton} ${styles.pdfButton} ${pdfStatus === 'success' ? styles.success : ''} ${pdfStatus === 'error' ? styles.errorState : ''}`}
+            disabled={generatingPdf}
+          >
+            {generatingPdf ? 'Generating...' : pdfStatus === 'success' ? '✓ PDF Generated' : pdfStatus === 'error' ? '✕ Failed' : '📄 Generate PDF'}
           </button>
           {topic.customgpt_source_id ? (
             <span className={`${styles.actionButton} ${styles.gptButton} ${styles.alreadyAdded}`}>

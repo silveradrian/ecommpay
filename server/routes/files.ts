@@ -3,6 +3,7 @@ import multer from 'multer'
 import path from 'path'
 import fs from 'fs'
 import pool from '../db/index.js'
+import { generatePdf } from '../utils/pdf-generator.js'
 
 const router = Router()
 
@@ -129,6 +130,61 @@ router.get('/:id/files/:filename', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('File download error:', error)
     res.status(500).json({ error: 'Failed to download file' })
+  }
+})
+
+// POST /api/topics/:id/generate-pdf - Generate branded PDF from approved content
+router.post('/:id/generate-pdf', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+
+    // Fetch topic from database
+    const result = await pool.query(
+      `SELECT id, topic, category, priority, status, approved_content, approved_at
+       FROM topics WHERE id = $1`,
+      [id]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Topic not found' })
+    }
+
+    const topic = result.rows[0]
+
+    if (topic.status !== 'Approved' || !topic.approved_content) {
+      return res.status(400).json({ error: 'Topic must be approved with content before generating PDF' })
+    }
+
+    // Ensure output directory exists
+    const topicDir = path.join(TOPICS_DIR, id as string)
+    ensureDir(topicDir)
+
+    const pdfPath = path.join(topicDir, 'content.pdf')
+
+    // Generate the branded PDF
+    await generatePdf(pdfPath, {
+      title: topic.topic,
+      category: topic.category,
+      priority: topic.priority,
+      approvedAt: topic.approved_at,
+      markdown: topic.approved_content,
+    })
+
+    // Update database with PDF file path
+    const updateResult = await pool.query(
+      `UPDATE topics SET pdf_file_path = $1 WHERE id = $2 RETURNING *`,
+      [pdfPath, id]
+    )
+
+    console.log(`✓ PDF generated for topic ${id}: ${pdfPath}`)
+
+    res.json({
+      message: 'PDF generated successfully',
+      topic: updateResult.rows[0],
+    })
+  } catch (error) {
+    console.error('PDF generation error:', error)
+    res.status(500).json({ error: 'Failed to generate PDF' })
   }
 })
 

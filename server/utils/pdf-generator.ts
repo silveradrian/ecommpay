@@ -1,0 +1,424 @@
+import PDFDocument from 'pdfkit'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+// Resolve asset paths (works in both dev and production)
+function resolveAsset(relativePath: string): string {
+  // In dev: server/utils/ -> server/fonts/
+  // In prod: dist-server/utils/ -> dist-server/fonts/
+  return path.join(__dirname, '..', relativePath)
+}
+
+function resolvePublicAsset(relativePath: string): string {
+  // In dev: server/utils/ -> public/img/
+  // In prod: dist-server/utils/ -> dist/img/
+  const devPath = path.join(__dirname, '../../public', relativePath)
+  const prodPath = path.join(__dirname, '../dist', relativePath)
+  if (fs.existsSync(devPath)) return devPath
+  if (fs.existsSync(prodPath)) return prodPath
+  // Fallback: check relative to dist (production layout)
+  const altProdPath = path.join(__dirname, '../../dist', relativePath)
+  if (fs.existsSync(altProdPath)) return altProdPath
+  return devPath // return dev path even if missing, let caller handle error
+}
+
+// Savi Design System colors
+const COLORS = {
+  deepForestGreen: '#0F2B1D',
+  warmOrange: '#FF6A00',
+  magenta: '#C137A2',
+  accentPurple: '#A020F0',
+  white: '#FFFFFF',
+  black: '#000000',
+  lightGray: '#F5F5F5',
+  mediumGray: '#666666',
+  darkGray: '#333333',
+}
+
+// PDF layout constants
+const PAGE = {
+  width: 595.28,   // A4
+  height: 841.89,  // A4
+  marginLeft: 60,
+  marginRight: 60,
+  marginTop: 80,
+  marginBottom: 70,
+  contentWidth: 595.28 - 120, // width - marginLeft - marginRight
+}
+
+interface PdfOptions {
+  title: string
+  category?: string | null
+  priority?: string | null
+  approvedAt?: string | null
+  markdown: string
+}
+
+// Simple markdown line parser
+interface ParsedLine {
+  type: 'h1' | 'h2' | 'h3' | 'h4' | 'paragraph' | 'bullet' | 'numbered' | 'hr' | 'blank' | 'bold-line' | 'code'
+  text: string
+  indent?: number
+}
+
+function parseMarkdownLines(markdown: string): ParsedLine[] {
+  const lines = markdown.split('\n')
+  const parsed: ParsedLine[] = []
+  let inCodeBlock = false
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+
+    if (trimmed.startsWith('```')) {
+      inCodeBlock = !inCodeBlock
+      continue
+    }
+
+    if (inCodeBlock) {
+      parsed.push({ type: 'code', text: line })
+      continue
+    }
+
+    if (trimmed === '') {
+      parsed.push({ type: 'blank', text: '' })
+    } else if (trimmed === '---' || trimmed === '***' || trimmed === '___') {
+      parsed.push({ type: 'hr', text: '' })
+    } else if (trimmed.startsWith('#### ')) {
+      parsed.push({ type: 'h4', text: trimmed.slice(5) })
+    } else if (trimmed.startsWith('### ')) {
+      parsed.push({ type: 'h3', text: trimmed.slice(4) })
+    } else if (trimmed.startsWith('## ')) {
+      parsed.push({ type: 'h2', text: trimmed.slice(3) })
+    } else if (trimmed.startsWith('# ')) {
+      parsed.push({ type: 'h1', text: trimmed.slice(2) })
+    } else if (/^[-*+]\s/.test(trimmed)) {
+      const indent = line.search(/\S/)
+      parsed.push({ type: 'bullet', text: trimmed.slice(2), indent: Math.floor(indent / 2) })
+    } else if (/^\d+\.\s/.test(trimmed)) {
+      const match = trimmed.match(/^\d+\.\s(.*)/)
+      parsed.push({ type: 'numbered', text: match ? match[1] : trimmed, indent: 0 })
+    } else if (/^\*\*[^*]+\*\*$/.test(trimmed)) {
+      parsed.push({ type: 'bold-line', text: trimmed.replace(/\*\*/g, '') })
+    } else {
+      parsed.push({ type: 'paragraph', text: trimmed })
+    }
+  }
+
+  return parsed
+}
+
+// Register fonts with fallback
+function registerFonts(doc: PDFKit.PDFDocument): boolean {
+  let fontsLoaded = false
+  try {
+    const poppinsBold = resolveAsset('fonts/Poppins-Bold.ttf')
+    const poppinsSemiBold = resolveAsset('fonts/Poppins-SemiBold.ttf')
+    const poppinsRegular = resolveAsset('fonts/Poppins-Regular.ttf')
+    const interRegular = resolveAsset('fonts/Inter-Regular.ttf')
+
+    if (fs.existsSync(poppinsBold)) {
+      doc.registerFont('Poppins-Bold', poppinsBold)
+    }
+    if (fs.existsSync(poppinsSemiBold)) {
+      doc.registerFont('Poppins-SemiBold', poppinsSemiBold)
+    }
+    if (fs.existsSync(poppinsRegular)) {
+      doc.registerFont('Poppins-Regular', poppinsRegular)
+    }
+    if (fs.existsSync(interRegular)) {
+      doc.registerFont('Inter', interRegular)
+    }
+    fontsLoaded = true
+  } catch (err) {
+    console.warn('Could not load custom fonts, using Helvetica fallback:', err)
+  }
+  return fontsLoaded
+}
+
+// Font helpers with fallback
+function fontHeading(fontsLoaded: boolean): string {
+  return fontsLoaded ? 'Poppins-Bold' : 'Helvetica-Bold'
+}
+function fontSubheading(fontsLoaded: boolean): string {
+  return fontsLoaded ? 'Poppins-SemiBold' : 'Helvetica-Bold'
+}
+function fontBody(fontsLoaded: boolean): string {
+  return fontsLoaded ? 'Inter' : 'Helvetica'
+}
+
+// Draw gradient accent bar
+function drawGradientBar(doc: PDFKit.PDFDocument, x: number, y: number, width: number, height: number) {
+  const grad = doc.linearGradient(x, y, x + width, y)
+  grad.stop(0, COLORS.warmOrange)
+  grad.stop(1, COLORS.magenta)
+  doc.rect(x, y, width, height).fill(grad)
+}
+
+// Draw page header with logos
+function drawPageHeader(doc: PDFKit.PDFDocument) {
+  const saviLogoPath = resolvePublicAsset('img/Savi_logo_Savi_Colour reversed.png')
+  const ecommpayLogoPath = resolvePublicAsset('img/ecommpaylogo.png')
+
+  // Light header background
+  doc.rect(0, 0, PAGE.width, 55).fill(COLORS.deepForestGreen)
+
+  // Savi logo (left)
+  try {
+    if (fs.existsSync(saviLogoPath)) {
+      doc.image(saviLogoPath, PAGE.marginLeft, 12, { height: 30 })
+    }
+  } catch (err) {
+    console.warn('Could not load Savi logo:', err)
+  }
+
+  // ecommpay logo (right)
+  try {
+    if (fs.existsSync(ecommpayLogoPath)) {
+      doc.image(ecommpayLogoPath, PAGE.width - PAGE.marginRight - 100, 12, { height: 30 })
+    }
+  } catch (err) {
+    console.warn('Could not load ecommpay logo:', err)
+  }
+
+  // Gradient accent line below header
+  drawGradientBar(doc, 0, 55, PAGE.width, 3)
+}
+
+// Draw page footer
+function drawPageFooter(doc: PDFKit.PDFDocument, pageNum: number, fontsLoaded: boolean) {
+  const y = PAGE.height - 45
+
+  // Thin gradient line
+  drawGradientBar(doc, PAGE.marginLeft, y, PAGE.contentWidth, 1)
+
+  // Footer text
+  doc.font(fontBody(fontsLoaded)).fontSize(8).fillColor(COLORS.mediumGray)
+  doc.text('Powered by Savi × ecommpay', PAGE.marginLeft, y + 8, { width: PAGE.contentWidth / 2 })
+  doc.text(`Page ${pageNum}`, PAGE.width / 2, y + 8, {
+    width: PAGE.contentWidth / 2,
+    align: 'right',
+  })
+}
+
+
+// Strip markdown inline formatting for clean text
+function stripInlineMarkdown(text: string): string {
+  return text
+    .replace(/\*\*\*(.*?)\*\*\*/g, '$1')  // bold+italic
+    .replace(/\*\*(.*?)\*\*/g, '$1')       // bold
+    .replace(/\*(.*?)\*/g, '$1')           // italic
+    .replace(/`(.*?)`/g, '$1')             // inline code
+    .replace(/\[(.*?)\]\(.*?\)/g, '$1')    // links
+}
+
+// Write rich text with inline bold/italic support
+function writeRichText(
+  doc: PDFKit.PDFDocument,
+  text: string,
+  x: number,
+  width: number,
+  fontsLoaded: boolean,
+  fontSize: number = 10.5,
+  color: string = COLORS.darkGray
+) {
+  // Simple approach: render with basic inline formatting
+  const cleanText = stripInlineMarkdown(text)
+  doc.font(fontBody(fontsLoaded)).fontSize(fontSize).fillColor(color)
+  doc.text(cleanText, x, undefined, { width, lineGap: 3 })
+}
+
+// Check if we need a new page
+function needsNewPage(doc: PDFKit.PDFDocument, spaceNeeded: number): boolean {
+  return doc.y + spaceNeeded > PAGE.height - PAGE.marginBottom
+}
+
+// Main PDF generation function
+export async function generatePdf(outputPath: string, options: PdfOptions): Promise<void> {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({
+        size: 'A4',
+        margins: {
+          top: PAGE.marginTop,
+          bottom: PAGE.marginBottom,
+          left: PAGE.marginLeft,
+          right: PAGE.marginRight,
+        },
+        info: {
+          Title: options.title,
+          Author: 'Savi × ecommpay Knowledge Pipeline',
+          Creator: 'Savi Knowledge Pipeline',
+        },
+        bufferPages: true,
+      })
+
+      const stream = fs.createWriteStream(outputPath)
+      doc.pipe(stream)
+
+      const fontsLoaded = registerFonts(doc)
+      const lines = parseMarkdownLines(options.markdown)
+
+      // === COVER / TITLE SECTION ===
+      drawPageHeader(doc)
+
+      // Title
+      doc.y = PAGE.marginTop + 10
+      doc.font(fontHeading(fontsLoaded)).fontSize(26).fillColor(COLORS.deepForestGreen)
+      doc.text(options.title, PAGE.marginLeft, doc.y, { width: PAGE.contentWidth })
+
+      // Small gradient bar under title
+      doc.moveDown(0.3)
+      drawGradientBar(doc, PAGE.marginLeft, doc.y, 80, 3)
+      doc.moveDown(0.8)
+
+      // Metadata line
+      const metaParts: string[] = []
+      if (options.category) metaParts.push(`Category: ${options.category}`)
+      if (options.priority) metaParts.push(`Priority: ${options.priority}`)
+      if (options.approvedAt) {
+        const date = new Date(options.approvedAt).toLocaleDateString('en-GB', {
+          day: 'numeric', month: 'long', year: 'numeric'
+        })
+        metaParts.push(`Approved: ${date}`)
+      }
+      if (metaParts.length > 0) {
+        doc.font(fontBody(fontsLoaded)).fontSize(9.5).fillColor(COLORS.mediumGray)
+        doc.text(metaParts.join('  •  '), PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
+        doc.moveDown(1.5)
+      }
+
+      // Thin separator
+      doc.moveTo(PAGE.marginLeft, doc.y)
+        .lineTo(PAGE.marginLeft + PAGE.contentWidth, doc.y)
+        .strokeColor('#E0E0E0').lineWidth(0.5).stroke()
+      doc.moveDown(1)
+
+      // === BODY CONTENT ===
+      let lastType: string = ''
+
+      for (const line of lines) {
+        // Check for page break needs
+        if (line.type === 'h2' && needsNewPage(doc, 60)) {
+          doc.addPage()
+          drawPageHeader(doc)
+          doc.y = PAGE.marginTop + 10
+        } else if (needsNewPage(doc, 25)) {
+          doc.addPage()
+          drawPageHeader(doc)
+          doc.y = PAGE.marginTop + 10
+        }
+
+        switch (line.type) {
+          case 'h1':
+            doc.moveDown(0.5)
+            doc.font(fontHeading(fontsLoaded)).fontSize(22).fillColor(COLORS.deepForestGreen)
+            doc.text(stripInlineMarkdown(line.text), PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
+            drawGradientBar(doc, PAGE.marginLeft, doc.y + 2, 60, 2)
+            doc.moveDown(0.6)
+            break
+
+          case 'h2':
+            if (lastType !== 'blank') doc.moveDown(0.8)
+            doc.font(fontHeading(fontsLoaded)).fontSize(17).fillColor(COLORS.deepForestGreen)
+            doc.text(stripInlineMarkdown(line.text), PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
+            drawGradientBar(doc, PAGE.marginLeft, doc.y + 2, 50, 2)
+            doc.moveDown(0.5)
+            break
+
+          case 'h3':
+            if (lastType !== 'blank') doc.moveDown(0.5)
+            doc.font(fontSubheading(fontsLoaded)).fontSize(13.5).fillColor(COLORS.deepForestGreen)
+            doc.text(stripInlineMarkdown(line.text), PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
+            doc.moveDown(0.3)
+            break
+
+          case 'h4':
+            if (lastType !== 'blank') doc.moveDown(0.3)
+            doc.font(fontSubheading(fontsLoaded)).fontSize(11.5).fillColor(COLORS.darkGray)
+            doc.text(stripInlineMarkdown(line.text), PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
+            doc.moveDown(0.2)
+            break
+
+          case 'paragraph':
+            writeRichText(doc, line.text, PAGE.marginLeft, PAGE.contentWidth, fontsLoaded)
+            doc.moveDown(0.4)
+            break
+
+          case 'bold-line':
+            doc.font(fontSubheading(fontsLoaded)).fontSize(10.5).fillColor(COLORS.darkGray)
+            doc.text(line.text, PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
+            doc.moveDown(0.3)
+            break
+
+          case 'bullet': {
+            const indent = (line.indent || 0) * 15
+            const bulletX = PAGE.marginLeft + 10 + indent
+            const textX = bulletX + 12
+            const textWidth = PAGE.contentWidth - 22 - indent
+
+            // Draw bullet dot
+            doc.circle(bulletX + 2, doc.y + 5, 2).fill(COLORS.magenta)
+            writeRichText(doc, line.text, textX, textWidth, fontsLoaded)
+            doc.moveDown(0.15)
+            break
+          }
+
+          case 'numbered': {
+            const numX = PAGE.marginLeft + 10
+            const numTextX = numX + 18
+            const numWidth = PAGE.contentWidth - 28
+
+            doc.font(fontSubheading(fontsLoaded)).fontSize(10.5).fillColor(COLORS.magenta)
+            // We don't have the actual number, so use a bullet style
+            doc.font(fontBody(fontsLoaded)).fontSize(10.5).fillColor(COLORS.darkGray)
+            doc.text(`• ${stripInlineMarkdown(line.text)}`, numX, undefined, { width: numWidth, lineGap: 3 })
+            doc.moveDown(0.15)
+            break
+          }
+
+          case 'hr':
+            doc.moveDown(0.5)
+            const hrY = doc.y
+            drawGradientBar(doc, PAGE.marginLeft, hrY, PAGE.contentWidth, 1)
+            doc.moveDown(0.8)
+            break
+
+          case 'code':
+            doc.font('Courier').fontSize(9).fillColor(COLORS.darkGray)
+            doc.rect(PAGE.marginLeft, doc.y - 2, PAGE.contentWidth, 14).fill('#F5F5F0')
+            doc.fillColor(COLORS.darkGray)
+            doc.text(line.text, PAGE.marginLeft + 8, undefined, { width: PAGE.contentWidth - 16 })
+            break
+
+          case 'blank':
+            if (lastType !== 'blank') doc.moveDown(0.3)
+            break
+        }
+
+        lastType = line.type
+      }
+
+      // === ADD HEADERS AND FOOTERS TO ALL PAGES ===
+      const pageCount = doc.bufferedPageRange().count
+      for (let i = 0; i < pageCount; i++) {
+        doc.switchToPage(i)
+        if (i > 0) {
+          // Header already drawn on first page during content flow
+          // For subsequent pages, header was drawn when addPage was called
+        }
+        drawPageFooter(doc, i + 1, fontsLoaded)
+      }
+
+      doc.end()
+
+      stream.on('finish', () => resolve())
+      stream.on('error', (err) => reject(err))
+    } catch (err) {
+      reject(err)
+    }
+  })
+}

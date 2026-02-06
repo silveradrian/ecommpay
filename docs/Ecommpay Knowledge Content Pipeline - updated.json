@@ -423,6 +423,21 @@
       ]
     },
     {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://ecommpay-grbzb.kinsta.app/api/topics/{{ $json.topic.id }}/generate-pdf",
+        "options": {}
+      },
+      "id": "b2a4f8e1-7c3d-4a9b-8e5f-1d6c9a0b3e7f",
+      "name": "Generate Branded PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        5072,
+        1984
+      ]
+    },
+    {
       "parameters": {},
       "id": "614c10db-c3a5-4299-a53b-9b38765cb44d",
       "name": "No Queued Topics",
@@ -807,6 +822,17 @@
         [
           {
             "node": "Send review request and wait for response1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload MD File": {
+      "main": [
+        [
+          {
+            "node": "Generate Branded PDF",
             "type": "main",
             "index": 0
           }

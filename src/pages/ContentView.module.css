@@ -131,6 +131,33 @@
   box-shadow: 0 4px 12px rgba(193, 55, 162, 0.4);
 }
 
+/* PDF generate button styles */
+.pdfButton {
+  background: linear-gradient(135deg, var(--color-accent-start), var(--color-accent-end));
+  border-color: var(--color-accent-start);
+}
+
+.pdfButton:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--color-accent-end), var(--color-accent-start));
+  border-color: var(--color-accent-end);
+  box-shadow: 0 4px 12px rgba(193, 55, 162, 0.3);
+}
+
+.pdfButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.pdfButton.success {
+  background: linear-gradient(135deg, #10a37f, #059669);
+  border-color: #10a37f;
+}
+
+.pdfButton.errorState {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border-color: #ef4444;
+}
+
 /* CustomGPT button styles */
 .gptButton {
   background: linear-gradient(135deg, #10a37f, #1a7f5a);
