@@ -194,7 +194,7 @@ ${topic.approved_content}`
       return res.status(502).json({ error: 'Failed to upload content to Savi' })
     }
 
-    const uploadData = await uploadResponse.json()
+    const uploadData = await uploadResponse.json() as { data?: { id?: string }; id?: string }
     const sourceId = uploadData.data?.id || uploadData.id
 
     if (!sourceId) {
