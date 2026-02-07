@@ -121,13 +121,31 @@ router.get('/:id/files/:filename', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'File not found' })
     }
 
+    // Look up topic title for a meaningful download filename
+    const ext = path.extname(filename)
+    let downloadName = filename
+    try {
+      const result = await pool.query('SELECT topic FROM topics WHERE id = $1', [id])
+      if (result.rows.length > 0 && result.rows[0].topic) {
+        const slug = result.rows[0].topic
+          .replace(/[^a-zA-Z0-9\s-]/g, '')
+          .trim()
+          .replace(/\s+/g, '-')
+          .toLowerCase()
+          .slice(0, 80)
+        downloadName = `${slug}${ext}`
+      }
+    } catch {
+      // Fall back to generic filename if DB lookup fails
+    }
+
     // Set appropriate content type
     const contentType = filename.endsWith('.pdf')
       ? 'application/pdf'
       : 'text/markdown'
 
     res.setHeader('Content-Type', contentType)
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`)
     res.sendFile(filePath)
   } catch (error) {
     console.error('File download error:', error)

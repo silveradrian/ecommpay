@@ -1,5 +1,11 @@
 import { Router, Request, Response } from 'express'
+import fs from 'fs'
+import path from 'path'
 import pool from '../db/index.js'
+
+// Storage directory - matches files.ts
+const DATA_DIR = process.env.DATA_DIR || '/var/lib/data'
+const TOPICS_DIR = path.join(DATA_DIR, 'topics')
 
 const router = Router()
 
@@ -164,23 +170,42 @@ router.post('/:id/add-to-customgpt', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Topic must be approved with content before submitting to Savi' })
     }
 
-    // Build markdown file with metadata header
-    const fileName = `${topic.topic.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase().slice(0, 80)}.md`
-    const fileContent = `---
-title: ${topic.topic}
-category: ${topic.category || 'Uncategorized'}
-approved_at: ${topic.approved_at || new Date().toISOString()}
-source: Ecommpay Knowledge Pipeline
----
+    // Ensure we have a PDF to upload
+    const topicDir = path.join(TOPICS_DIR, id as string)
+    const pdfPath = path.join(topicDir, 'content.pdf')
 
-${topic.approved_content}`
+    // If no PDF exists, generate one first
+    if (!topic.pdf_file_path || !fs.existsSync(pdfPath)) {
+      try {
+        if (!fs.existsSync(topicDir)) {
+          fs.mkdirSync(topicDir, { recursive: true })
+        }
+        const { generatePdf } = await import('../utils/pdf-generator.js')
+        await generatePdf(pdfPath, {
+          title: topic.topic,
+          category: topic.category,
+          priority: topic.priority,
+          approvedAt: topic.approved_at,
+          markdown: topic.approved_content,
+        })
+        // Update DB with PDF path
+        await pool.query('UPDATE topics SET pdf_file_path = $1 WHERE id = $2', [pdfPath, id])
+        console.log(`✓ PDF auto-generated for Savi upload: ${pdfPath}`)
+      } catch (pdfErr) {
+        console.error('Failed to generate PDF for Savi upload:', pdfErr)
+        return res.status(500).json({ error: 'Failed to generate PDF for Savi upload' })
+      }
+    }
 
-    // Upload to CustomGPT Sources as multipart/form-data
+    // Read the PDF file and upload it to CustomGPT
+    const pdfBuffer = fs.readFileSync(pdfPath)
+    const fileName = `${topic.topic.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase().slice(0, 80)}.pdf`
+
     const formData = new FormData()
-    formData.append('file', new Blob([fileContent], { type: 'text/markdown' }), fileName)
+    formData.append('file', new Blob([pdfBuffer], { type: 'application/pdf' }), fileName)
 
     const uploadUrl = `https://app.customgpt.ai/api/v1/projects/${projectId}/sources`
-    console.log(`Uploading to CustomGPT: ${fileName}`)
+    console.log(`Uploading PDF to CustomGPT: ${fileName}`)
 
     const uploadResponse = await fetch(uploadUrl, {
       method: 'POST',
