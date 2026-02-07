@@ -47,10 +47,22 @@ app.get('/api/health', (_, res) => {
 })
 
 // Auth middleware - protect all other /api routes
+// Allows session auth (frontend) OR API key auth (n8n / external services)
 app.use('/api', (req, res, next) => {
+  // 1. Session-based auth (frontend)
   if ((req.session as any)?.authenticated) {
     return next()
   }
+
+  // 2. API key auth (n8n and external services)
+  const apiKey = process.env.API_KEY
+  if (apiKey) {
+    const authHeader = req.headers.authorization
+    if (authHeader === `Bearer ${apiKey}`) {
+      return next()
+    }
+  }
+
   return res.status(401).json({ error: 'Not authenticated' })
 })
 
