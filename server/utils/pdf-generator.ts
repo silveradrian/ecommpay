@@ -58,28 +58,77 @@ interface PdfOptions {
   markdown: string
 }
 
+// Table data structure
+interface TableData {
+  headers: string[]
+  rows: string[][]
+}
+
 // Simple markdown line parser
 interface ParsedLine {
-  type: 'h1' | 'h2' | 'h3' | 'h4' | 'paragraph' | 'bullet' | 'numbered' | 'hr' | 'blank' | 'bold-line' | 'code'
+  type: 'h1' | 'h2' | 'h3' | 'h4' | 'paragraph' | 'bullet' | 'numbered' | 'hr' | 'blank' | 'bold-line' | 'code' | 'table' | 'blockquote'
   text: string
   indent?: number
+  table?: TableData
+}
+
+// Helper: parse a markdown table row into cell strings
+function parseTableRow(line: string): string[] {
+  return line.split('|').slice(1, -1).map(cell => cell.trim())
+}
+
+// Helper: check if a line is a table separator (e.g. |---|---|)
+function isTableSeparator(line: string): boolean {
+  return /^\|[\s:]*-+[\s:]*(\|[\s:]*-+[\s:]*)*\|$/.test(line.trim())
 }
 
 function parseMarkdownLines(markdown: string): ParsedLine[] {
   const lines = markdown.split('\n')
   const parsed: ParsedLine[] = []
   let inCodeBlock = false
+  let i = 0
 
-  for (const line of lines) {
+  while (i < lines.length) {
+    const line = lines[i]
     const trimmed = line.trim()
 
     if (trimmed.startsWith('```')) {
       inCodeBlock = !inCodeBlock
+      i++
       continue
     }
 
     if (inCodeBlock) {
       parsed.push({ type: 'code', text: line })
+      i++
+      continue
+    }
+
+    // Detect markdown tables: line starts with | and contains at least one more |
+    if (trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.indexOf('|', 1) > 0) {
+      const tableLines: string[] = [trimmed]
+      i++
+      // Collect all consecutive table lines
+      while (i < lines.length) {
+        const nextTrimmed = lines[i].trim()
+        if (nextTrimmed.startsWith('|') && nextTrimmed.endsWith('|')) {
+          tableLines.push(nextTrimmed)
+          i++
+        } else {
+          break
+        }
+      }
+      // Parse table: first row = headers, skip separator, rest = data rows
+      if (tableLines.length >= 2) {
+        const headers = parseTableRow(tableLines[0])
+        const rows: string[][] = []
+        for (let t = 1; t < tableLines.length; t++) {
+          if (!isTableSeparator(tableLines[t])) {
+            rows.push(parseTableRow(tableLines[t]))
+          }
+        }
+        parsed.push({ type: 'table', text: '', table: { headers, rows } })
+      }
       continue
     }
 
@@ -95,6 +144,8 @@ function parseMarkdownLines(markdown: string): ParsedLine[] {
       parsed.push({ type: 'h2', text: trimmed.slice(3) })
     } else if (trimmed.startsWith('# ')) {
       parsed.push({ type: 'h1', text: trimmed.slice(2) })
+    } else if (/^>\s?/.test(trimmed)) {
+      parsed.push({ type: 'blockquote', text: trimmed.replace(/^>\s?/, '') })
     } else if (/^[-*+]\s/.test(trimmed)) {
       const indent = line.search(/\S/)
       parsed.push({ type: 'bullet', text: trimmed.slice(2), indent: Math.floor(indent / 2) })
@@ -106,6 +157,12 @@ function parseMarkdownLines(markdown: string): ParsedLine[] {
     } else {
       parsed.push({ type: 'paragraph', text: trimmed })
     }
+    i++
+  }
+
+  // Strip trailing blank lines to avoid unnecessary empty pages
+  while (parsed.length > 0 && parsed[parsed.length - 1].type === 'blank') {
+    parsed.pop()
   }
 
   return parsed
@@ -189,18 +246,24 @@ function drawPageHeader(doc: PDFKit.PDFDocument) {
 }
 
 // Draw page footer
+// IMPORTANT: lineBreak: false prevents PDFKit from auto-creating blank pages
+// when drawing text below the bottom margin boundary in buffered page mode
 function drawPageFooter(doc: PDFKit.PDFDocument, pageNum: number, fontsLoaded: boolean) {
   const y = PAGE.height - 45
 
   // Thin gradient line
   drawGradientBar(doc, PAGE.marginLeft, y, PAGE.contentWidth, 1)
 
-  // Footer text
+  // Footer text - lineBreak: false is critical to prevent blank page creation
   doc.font(fontBody(fontsLoaded)).fontSize(8).fillColor(COLORS.mediumGray)
-  doc.text('Powered by Savi × ecommpay', PAGE.marginLeft, y + 8, { width: PAGE.contentWidth / 2 })
+  doc.text('Powered by Savi × ecommpay', PAGE.marginLeft, y + 8, {
+    width: PAGE.contentWidth / 2,
+    lineBreak: false,
+  })
   doc.text(`Page ${pageNum}`, PAGE.width / 2, y + 8, {
     width: PAGE.contentWidth / 2,
     align: 'right',
+    lineBreak: false,
   })
 }
 
@@ -234,6 +297,99 @@ function writeRichText(
 // Check if we need a new page
 function needsNewPage(doc: PDFKit.PDFDocument, spaceNeeded: number): boolean {
   return doc.y + spaceNeeded > PAGE.height - PAGE.marginBottom
+}
+
+// Draw a markdown table
+function drawTable(
+  doc: PDFKit.PDFDocument,
+  table: TableData,
+  fontsLoaded: boolean
+) {
+  const colCount = table.headers.length
+  if (colCount === 0) return
+
+  const tableWidth = PAGE.contentWidth
+  const colWidth = tableWidth / colCount
+  const cellPadding = 6
+  const fontSize = 9
+  const rowHeight = 22
+  const headerBg = COLORS.deepForestGreen
+  const headerText = COLORS.white
+  const altRowBg = '#F8F8F8'
+  const borderColor = '#E0E0E0'
+  const startX = PAGE.marginLeft
+
+  // Estimate total table height to check for page break
+  const totalHeight = rowHeight + (table.rows.length * rowHeight)
+  if (needsNewPage(doc, Math.min(totalHeight, rowHeight * 4))) {
+    doc.addPage()
+    drawPageHeader(doc)
+    doc.y = PAGE.marginTop + 10
+  }
+
+  let currentY = doc.y
+
+  // Draw header row
+  doc.rect(startX, currentY, tableWidth, rowHeight).fill(headerBg)
+  doc.font(fontSubheading(fontsLoaded)).fontSize(fontSize).fillColor(headerText)
+  for (let c = 0; c < colCount; c++) {
+    const cellX = startX + (c * colWidth)
+    doc.text(
+      stripInlineMarkdown(table.headers[c] || ''),
+      cellX + cellPadding,
+      currentY + 6,
+      { width: colWidth - (cellPadding * 2), lineBreak: false }
+    )
+  }
+  currentY += rowHeight
+
+  // Draw data rows
+  doc.font(fontBody(fontsLoaded)).fontSize(fontSize).fillColor(COLORS.darkGray)
+  for (let r = 0; r < table.rows.length; r++) {
+    // Check for page break before each row
+    if (currentY + rowHeight > PAGE.height - PAGE.marginBottom) {
+      doc.addPage()
+      drawPageHeader(doc)
+      currentY = PAGE.marginTop + 10
+    }
+
+    // Alternating row background
+    if (r % 2 === 0) {
+      doc.rect(startX, currentY, tableWidth, rowHeight).fill(altRowBg)
+    }
+
+    // Row border
+    doc.moveTo(startX, currentY + rowHeight)
+      .lineTo(startX + tableWidth, currentY + rowHeight)
+      .strokeColor(borderColor).lineWidth(0.5).stroke()
+
+    // Cell text
+    doc.fillColor(COLORS.darkGray)
+    const row = table.rows[r]
+    for (let c = 0; c < colCount; c++) {
+      const cellX = startX + (c * colWidth)
+      // Vertical cell border
+      if (c > 0) {
+        doc.moveTo(cellX, currentY)
+          .lineTo(cellX, currentY + rowHeight)
+          .strokeColor(borderColor).lineWidth(0.5).stroke()
+      }
+      doc.font(fontBody(fontsLoaded)).fontSize(fontSize).fillColor(COLORS.darkGray)
+      doc.text(
+        stripInlineMarkdown(row[c] || ''),
+        cellX + cellPadding,
+        currentY + 6,
+        { width: colWidth - (cellPadding * 2), lineBreak: false }
+      )
+    }
+    currentY += rowHeight
+  }
+
+  // Outer border
+  doc.rect(startX, doc.y, tableWidth, currentY - doc.y)
+    .strokeColor(borderColor).lineWidth(1).stroke()
+
+  doc.y = currentY + 5
 }
 
 // Main PDF generation function
@@ -369,11 +525,8 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
 
           case 'numbered': {
             const numX = PAGE.marginLeft + 10
-            const numTextX = numX + 18
             const numWidth = PAGE.contentWidth - 28
 
-            doc.font(fontSubheading(fontsLoaded)).fontSize(10.5).fillColor(COLORS.magenta)
-            // We don't have the actual number, so use a bullet style
             doc.font(fontBody(fontsLoaded)).fontSize(10.5).fillColor(COLORS.darkGray)
             doc.text(`• ${stripInlineMarkdown(line.text)}`, numX, undefined, { width: numWidth, lineGap: 3 })
             doc.moveDown(0.15)
@@ -394,6 +547,27 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
             doc.text(line.text, PAGE.marginLeft + 8, undefined, { width: PAGE.contentWidth - 16 })
             break
 
+          case 'table':
+            if (line.table) {
+              doc.moveDown(0.3)
+              drawTable(doc, line.table, fontsLoaded)
+              doc.moveDown(0.3)
+            }
+            break
+
+          case 'blockquote': {
+            const bqX = PAGE.marginLeft + 4
+            const bqTextX = PAGE.marginLeft + 16
+            const bqWidth = PAGE.contentWidth - 20
+            // Draw left accent bar
+            doc.rect(bqX, doc.y - 1, 3, 14).fill(COLORS.warmOrange)
+            // Draw blockquote text in italic style
+            doc.font(fontBody(fontsLoaded)).fontSize(10.5).fillColor(COLORS.mediumGray)
+            doc.text(stripInlineMarkdown(line.text), bqTextX, undefined, { width: bqWidth, lineGap: 3 })
+            doc.moveDown(0.3)
+            break
+          }
+
           case 'blank':
             if (lastType !== 'blank') doc.moveDown(0.3)
             break
@@ -402,17 +576,30 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
         lastType = line.type
       }
 
-      // === ADD HEADERS AND FOOTERS TO ALL PAGES ===
-      const pageCount = doc.bufferedPageRange().count
-      for (let i = 0; i < pageCount; i++) {
+      // === ADD FOOTERS TO ALL PAGES ===
+      // IMPORTANT: Temporarily disable bottom margin on each page during footer
+      // rendering. Without this, doc.text() at the footer y-position (below the
+      // normal bottom margin) triggers PDFKit's auto-pagination, creating a blank
+      // page for every real page in the document.
+      const range = doc.bufferedPageRange()
+      for (let i = 0; i < range.count; i++) {
         doc.switchToPage(i)
-        if (i > 0) {
-          // Header already drawn on first page during content flow
-          // For subsequent pages, header was drawn when addPage was called
-        }
+        const savedY = doc.y
+        const savedMargin = (doc.page as any).margins.bottom
+        ;(doc.page as any).margins.bottom = 0
         drawPageFooter(doc, i + 1, fontsLoaded)
+        ;(doc.page as any).margins.bottom = savedMargin
+        doc.y = savedY
       }
 
+      // Switch back to the last page before ending to prevent
+      // PDFKit from appending extra blank pages
+      if (range.count > 0) {
+        doc.switchToPage(range.count - 1)
+      }
+
+      // Flush all buffered pages and finalize
+      doc.flushPages()
       doc.end()
 
       stream.on('finish', () => resolve())
