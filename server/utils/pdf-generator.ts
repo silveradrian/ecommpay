@@ -431,36 +431,52 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
       // === COVER / TITLE SECTION ===
       drawPageHeader(doc)
 
-      // Title
-      doc.y = PAGE.marginTop + 10
-      doc.font(fontHeading(fontsLoaded)).fontSize(26).fillColor(COLORS.deepForestGreen)
-      doc.text(options.title, PAGE.marginLeft, doc.y, { width: PAGE.contentWidth })
+      // Subtitle label — positioned above the title
+      const subtitleY = 200
+      doc.font(fontSubheading(fontsLoaded)).fontSize(11).fillColor(COLORS.warmOrange)
+      doc.text('KNOWLEDGE BASE ARTICLE', PAGE.marginLeft, subtitleY, {
+        width: PAGE.contentWidth,
+        characterSpacing: 2,
+      })
 
-      // Small gradient bar under title
-      doc.moveDown(0.3)
-      drawGradientBar(doc, PAGE.marginLeft, doc.y, 80, 3)
-      doc.moveDown(0.8)
+      // Title — large, positioned in the upper-third of the page
+      doc.moveDown(0.6)
+      doc.font(fontHeading(fontsLoaded)).fontSize(38).fillColor(COLORS.deepForestGreen)
+      doc.text(options.title, PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
 
-      // Metadata line
-      const metaParts: string[] = []
-      if (options.category) metaParts.push(`Category: ${options.category}`)
+      // Wide gradient bar under title
+      doc.moveDown(0.5)
+      drawGradientBar(doc, PAGE.marginLeft, doc.y, 160, 4)
+
+      // Metadata block — positioned in the lower portion of the page
+      const metaY = 560
+
+      // Thin separator above metadata
+      doc.moveTo(PAGE.marginLeft, metaY)
+        .lineTo(PAGE.marginLeft + PAGE.contentWidth, metaY)
+        .strokeColor('#D0D0D0').lineWidth(0.5).stroke()
+
+      if (options.category) {
+        doc.font(fontSubheading(fontsLoaded)).fontSize(10).fillColor(COLORS.mediumGray)
+        doc.text('Category', PAGE.marginLeft, metaY + 16, { width: PAGE.contentWidth })
+        doc.font(fontHeading(fontsLoaded)).fontSize(14).fillColor(COLORS.deepForestGreen)
+        doc.text(options.category, PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
+      }
+
       if (options.approvedAt) {
-        const date = new Date(options.approvedAt).toLocaleDateString('en-GB', {
+        const dateStr = new Date(options.approvedAt).toLocaleDateString('en-GB', {
           day: 'numeric', month: 'long', year: 'numeric'
         })
-        metaParts.push(`Approved: ${date}`)
-      }
-      if (metaParts.length > 0) {
-        doc.font(fontBody(fontsLoaded)).fontSize(9.5).fillColor(COLORS.mediumGray)
-        doc.text(metaParts.join('  •  '), PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
-        doc.moveDown(1.5)
+        const dateY = options.category ? metaY + 60 : metaY + 16
+        doc.font(fontSubheading(fontsLoaded)).fontSize(10).fillColor(COLORS.mediumGray)
+        doc.text('Approved', PAGE.marginLeft, dateY, { width: PAGE.contentWidth })
+        doc.font(fontHeading(fontsLoaded)).fontSize(14).fillColor(COLORS.deepForestGreen)
+        doc.text(dateStr, PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
       }
 
-      // Thin separator
-      doc.moveTo(PAGE.marginLeft, doc.y)
-        .lineTo(PAGE.marginLeft + PAGE.contentWidth, doc.y)
-        .strokeColor('#E0E0E0').lineWidth(0.5).stroke()
-      doc.moveDown(1)
+      // Decorative gradient band near the bottom of the cover page
+      const bandY = PAGE.height - 100
+      drawGradientBar(doc, 0, bandY, PAGE.width, 6)
 
       // === TABLE OF CONTENTS PAGE ===
       // Add a blank TOC page now; we'll fill it in after content is rendered
@@ -508,7 +524,6 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
             break
 
           case 'h3':
-            tocEntries.push({ text: stripInlineMarkdown(line.text), level: 3, page: doc.bufferedPageRange().count })
             if (lastType !== 'blank') doc.moveDown(0.5)
             doc.font(fontSubheading(fontsLoaded)).fontSize(13.5).fillColor(COLORS.deepForestGreen)
             doc.text(stripInlineMarkdown(line.text), PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
