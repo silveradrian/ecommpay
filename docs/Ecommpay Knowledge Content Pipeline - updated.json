@@ -61,6 +61,23 @@
     },
     {
       "parameters": {
+        "httpMethod": "POST",
+        "path": "topic-created",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "b2e4f8a1-7c3d-4e9a-a1b5-d6f0e2c8a4b7",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        1536,
+        1816
+      ],
+      "webhookId": "topic-created"
+    },
+    {
+      "parameters": {
         "url": "https://ecommpay-grbzb.kinsta.app/api/topics",
         "sendHeaders": true,
         "headerParameters": {
@@ -267,7 +284,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Assemble the final markdown document from parallel Perplexity responses.\n// Each input item is one section's Perplexity response (items arrive in order).\n// Headings are injected here so the system prompt can produce clean body text.\nconst allItems = $input.all();\nconst topicData = $('Parse Outline JSON').first().json;\nconst splitItems = $('Split Sections').all();\n\n// Helper: strip Perplexity citation markers like [1], [2][3], etc.\nfunction stripCitations(text) {\n  return text.replace(/\\[\\d+\\]/g, '').replace(/ {2,}/g, ' ');\n}\n\nconst title = topicData.title || topicData.topic;\nlet md = `# ${title}\\n\\n`;\n\n// Merge each section's generated content in order\nfor (let i = 0; i < allItems.length; i++) {\n  const heading = splitItems[i]?.json?.heading || `Section ${i + 1}`;\n  const sectionType = splitItems[i]?.json?.section_type || 'section';\n  try {\n    const rawContent = allItems[i].json.choices?.[0]?.message?.content || '';\n    const content = stripCitations(rawContent);\n    if (content) {\n      // Inject the section heading before the body text\n      if (sectionType === 'faqs') {\n        md += `## Frequently Asked Questions\\n\\n` + content.trim() + '\\n\\n';\n      } else {\n        md += `## ${heading}\\n\\n` + content.trim() + '\\n\\n';\n      }\n    } else {\n      md += `## ${heading}\\n\\nContent pending.\\n\\n`;\n    }\n  } catch (e) {\n    md += `## ${heading}\\n\\nContent generation failed.\\n\\n`;\n  }\n}\n\n// Add SEO metadata section\nconst seoData = topicData.seo_enrichment || {};\nif (seoData.keyword_suggestions?.length || seoData.related_searches?.length) {\n  md += '---\\n\\n## SEO Metadata\\n\\n';\n  if (topicData.target_keywords?.length) {\n    md += `**Target Keywords:** ${topicData.target_keywords.join(', ')}\\n\\n`;\n  }\n  if (seoData.keyword_suggestions?.length) {\n    md += '**Related Keywords:**\\n';\n    for (const kw of seoData.keyword_suggestions.slice(0, 10)) {\n      md += `- ${kw.keyword} (Search Vol: ${kw.search_volume})\\n`;\n    }\n    md += '\\n';\n  }\n  if (seoData.related_searches?.length) {\n    md += `**Related Searches:** ${seoData.related_searches.join(', ')}\\n\\n`;\n  }\n}\n\nmd += `---\\n\\n*Generated on ${new Date().toISOString().split('T')[0]}*\\n`;\n\n// Pass through retry fields from Split Sections (null on original flow, populated on retry)\nconst firstSplit = splitItems[0]?.json || {};\n\nreturn [{\n  json: {\n    id: topicData.id,\n    topic: topicData.topic,\n    category: topicData.category,\n    priority: topicData.priority,\n    title: title,\n    draft_markdown: md,\n    seo_enrichment: seoData,\n    edited_prompt: firstSplit.edited_prompt || null,\n    review_id: firstSplit.review_id || null\n  }\n}];"
+        "jsCode": "// Assemble the final markdown document from parallel Perplexity responses.\n// Each input item is one section's Perplexity response (items arrive in order).\n// Headings are injected here so the system prompt can produce clean body text.\nconst allItems = $input.all();\nconst topicData = $('Parse Outline JSON').first().json;\nconst splitItems = $('Split Sections').all();\n\n// Helper: strip Perplexity citation markers like [1], [2][3], etc.\n// Also removes em dashes and en dashes.\nfunction stripCitations(text) {\n  return text.replace(/\\[\\d+\\]/g, '').replace(/ {2,}/g, ' ').replace(/\\u2014/g, ' - ').replace(/\\u2013/g, ' - ');\n}\n\nconst title = topicData.title || topicData.topic;\nlet md = `# ${title}\\n\\n`;\n\n// Merge each section's generated content in order\nfor (let i = 0; i < allItems.length; i++) {\n  const heading = splitItems[i]?.json?.heading || `Section ${i + 1}`;\n  const sectionType = splitItems[i]?.json?.section_type || 'section';\n  try {\n    const rawContent = allItems[i].json.choices?.[0]?.message?.content || '';\n    const content = stripCitations(rawContent);\n    if (content) {\n      // Inject the section heading before the body text\n      if (sectionType === 'faqs') {\n        md += `## Frequently Asked Questions\\n\\n` + content.trim() + '\\n\\n';\n      } else {\n        md += `## ${heading}\\n\\n` + content.trim() + '\\n\\n';\n      }\n    } else {\n      md += `## ${heading}\\n\\nContent pending.\\n\\n`;\n    }\n  } catch (e) {\n    md += `## ${heading}\\n\\nContent generation failed.\\n\\n`;\n  }\n}\n\n// Add SEO metadata section\nconst seoData = topicData.seo_enrichment || {};\nif (seoData.keyword_suggestions?.length || seoData.related_searches?.length) {\n  md += '---\\n\\n## SEO Metadata\\n\\n';\n  if (topicData.target_keywords?.length) {\n    md += `**Target Keywords:** ${topicData.target_keywords.join(', ')}\\n\\n`;\n  }\n  if (seoData.keyword_suggestions?.length) {\n    md += '**Related Keywords:**\\n';\n    for (const kw of seoData.keyword_suggestions.slice(0, 10)) {\n      md += `- ${kw.keyword} (Search Vol: ${kw.search_volume})\\n`;\n    }\n    md += '\\n';\n  }\n  if (seoData.related_searches?.length) {\n    md += `**Related Searches:** ${seoData.related_searches.join(', ')}\\n\\n`;\n  }\n}\n\nmd += `---\\n\\n*Generated on ${new Date().toISOString().split('T')[0]}*\\n`;\n\n// Final cleanup: remove any remaining em/en dashes from the entire document\nmd = md.replace(/\\u2014/g, ' - ').replace(/\\u2013/g, ' - ');\n\n// Pass through retry fields from Split Sections (null on original flow, populated on retry)\nconst firstSplit = splitItems[0]?.json || {};\n\nreturn [{\n  json: {\n    id: topicData.id,\n    topic: topicData.topic,\n    category: topicData.category,\n    priority: topicData.priority,\n    title: title,\n    draft_markdown: md,\n    seo_enrichment: seoData,\n    edited_prompt: firstSplit.edited_prompt || null,\n    review_id: firstSplit.review_id || null\n  }\n}];"
       },
       "id": "cdd9abcb-2c8a-4d80-b5fd-9bb4fe039c9d",
       "name": "Assemble Draft Document",
@@ -758,6 +775,17 @@
       ]
     },
     "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
       "main": [
         [
           {

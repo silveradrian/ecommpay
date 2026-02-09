@@ -59,8 +59,20 @@ router.post('/', async (req: Request, res: Response) => {
        RETURNING *`,
       [topic.trim(), category?.trim() || null, priority || 'medium']
     )
-    
+
     res.status(201).json(result.rows[0])
+
+    // Fire-and-forget: notify n8n webhook so the pipeline starts immediately
+    const webhookUrl = process.env.N8N_WEBHOOK_URL
+    if (webhookUrl) {
+      fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic_id: result.rows[0].id }),
+      }).catch(err => {
+        console.error('Failed to call n8n webhook (non-blocking):', err.message)
+      })
+    }
   } catch (error) {
     console.error('Error creating topic:', error)
     res.status(500).json({ error: 'Failed to create topic' })

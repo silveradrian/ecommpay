@@ -64,6 +64,13 @@ interface TableData {
   rows: string[][]
 }
 
+// TOC entry collected during content rendering
+interface TocEntry {
+  text: string
+  level: number  // 1 = h1, 2 = h2, 3 = h3
+  page: number
+}
+
 // Simple markdown line parser
 interface ParsedLine {
   type: 'h1' | 'h2' | 'h3' | 'h4' | 'paragraph' | 'bullet' | 'numbered' | 'hr' | 'blank' | 'bold-line' | 'code' | 'table' | 'blockquote'
@@ -416,7 +423,11 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
       doc.pipe(stream)
 
       const fontsLoaded = registerFonts(doc)
+
       const lines = parseMarkdownLines(options.markdown)
+
+      // Collect TOC entries during rendering
+      const tocEntries: TocEntry[] = []
 
       // === COVER / TITLE SECTION ===
       drawPageHeader(doc)
@@ -453,6 +464,14 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
         .strokeColor('#E0E0E0').lineWidth(0.5).stroke()
       doc.moveDown(1)
 
+      // === TABLE OF CONTENTS PAGE ===
+      // Add a blank TOC page now; we'll fill it in after content is rendered
+      // so we know the actual page numbers.
+      doc.addPage()
+      drawPageHeader(doc)
+      const tocPageIndex = doc.bufferedPageRange().count - 1
+      doc.y = PAGE.marginTop + 10
+
       // === BODY CONTENT ===
       let lastType: string = ''
 
@@ -470,6 +489,7 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
 
         switch (line.type) {
           case 'h1':
+            tocEntries.push({ text: stripInlineMarkdown(line.text), level: 1, page: doc.bufferedPageRange().count })
             doc.moveDown(0.5)
             doc.font(fontHeading(fontsLoaded)).fontSize(22).fillColor(COLORS.deepForestGreen)
             doc.text(stripInlineMarkdown(line.text), PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
@@ -478,6 +498,7 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
             break
 
           case 'h2':
+            tocEntries.push({ text: stripInlineMarkdown(line.text), level: 2, page: doc.bufferedPageRange().count })
             if (lastType !== 'blank') doc.moveDown(0.8)
             doc.font(fontHeading(fontsLoaded)).fontSize(17).fillColor(COLORS.deepForestGreen)
             doc.text(stripInlineMarkdown(line.text), PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
@@ -486,6 +507,7 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
             break
 
           case 'h3':
+            tocEntries.push({ text: stripInlineMarkdown(line.text), level: 3, page: doc.bufferedPageRange().count })
             if (lastType !== 'blank') doc.moveDown(0.5)
             doc.font(fontSubheading(fontsLoaded)).fontSize(13.5).fillColor(COLORS.deepForestGreen)
             doc.text(stripInlineMarkdown(line.text), PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
@@ -575,6 +597,48 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
 
         lastType = line.type
       }
+
+      // === RENDER TABLE OF CONTENTS ===
+      // Now that all content is rendered, we know the page numbers.
+      // Switch back to the TOC page and draw the entries.
+      // Disable bottom margin to prevent auto-pagination (same trick as footers).
+      doc.switchToPage(tocPageIndex)
+      const savedTocY = doc.y
+      const savedTocMargin = (doc.page as any).margins.bottom
+      ;(doc.page as any).margins.bottom = 0
+      doc.y = PAGE.marginTop + 10
+
+      // TOC title
+      doc.font(fontHeading(fontsLoaded)).fontSize(20).fillColor(COLORS.deepForestGreen)
+      doc.text('Table of Contents', PAGE.marginLeft, doc.y, { width: PAGE.contentWidth })
+      drawGradientBar(doc, PAGE.marginLeft, doc.y + 2, 60, 2)
+      doc.moveDown(1)
+
+      // TOC entries
+      for (const entry of tocEntries) {
+        const indent = (entry.level - 1) * 20
+        const entryX = PAGE.marginLeft + indent
+        const entryWidth = PAGE.contentWidth - indent - 40
+        const fontSize = entry.level === 1 ? 11 : entry.level === 2 ? 10 : 9
+        const fontFn = entry.level === 1 ? fontSubheading : fontBody
+
+        doc.font(fontFn(fontsLoaded)).fontSize(fontSize).fillColor(COLORS.darkGray)
+        doc.text(entry.text, entryX, undefined, { width: entryWidth, continued: false })
+
+        // Page number right-aligned on the same line
+        const lineY = doc.y - (fontSize + 3) // go back up to the line we just wrote
+        doc.font(fontBody(fontsLoaded)).fontSize(fontSize).fillColor(COLORS.mediumGray)
+        doc.text(String(entry.page), PAGE.marginLeft, lineY, {
+          width: PAGE.contentWidth,
+          align: 'right',
+          lineBreak: false,
+        })
+
+        doc.moveDown(entry.level === 1 ? 0.3 : 0.15)
+      }
+
+      ;(doc.page as any).margins.bottom = savedTocMargin
+      doc.y = savedTocY
 
       // === ADD FOOTERS TO ALL PAGES ===
       // IMPORTANT: Temporarily disable bottom margin on each page during footer
