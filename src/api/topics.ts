@@ -6,7 +6,6 @@ export interface Topic {
   id: string
   topic: string
   category: string | null
-  priority: 'low' | 'medium' | 'high'
   status: 'Queued' | 'In Progress' | 'In Review' | 'Approved' | 'Rejected'
   approved_content: string | null
   md_file_path: string | null
@@ -21,7 +20,6 @@ export interface Topic {
 export interface CreateTopicData {
   topic: string
   category?: string
-  priority?: 'low' | 'medium' | 'high'
 }
 
 // Fetch all topics

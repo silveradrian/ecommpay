@@ -53,7 +53,6 @@ const PAGE = {
 interface PdfOptions {
   title: string
   category?: string | null
-  priority?: string | null
   approvedAt?: string | null
   markdown: string
 }
@@ -445,7 +444,6 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
       // Metadata line
       const metaParts: string[] = []
       if (options.category) metaParts.push(`Category: ${options.category}`)
-      if (options.priority) metaParts.push(`Priority: ${options.priority}`)
       if (options.approvedAt) {
         const date = new Date(options.approvedAt).toLocaleDateString('en-GB', {
           day: 'numeric', month: 'long', year: 'numeric'

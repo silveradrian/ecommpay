@@ -31,7 +31,6 @@ GET /api/topics
     "id": "550e8400-e29b-41d4-a716-446655440000",
     "topic": "Cross-border payment regulations",
     "category": "Compliance",
-    "priority": "high",
     "status": "Queued",
     "created_at": "2026-02-03T10:30:00.000Z",
     "updated_at": "2026-02-03T10:30:00.000Z",
@@ -58,7 +57,6 @@ GET /api/topics/:id
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "topic": "Cross-border payment regulations",
   "category": "Compliance",
-  "priority": "high",
   "status": "In Progress",
   "approved_content": null,
   "md_file_path": null,
@@ -84,8 +82,7 @@ Content-Type: application/json
 ```json
 {
   "topic": "AI-powered fraud detection",
-  "category": "Technical",
-  "priority": "medium"
+  "category": "Technical"
 }
 ```
 
@@ -93,7 +90,6 @@ Content-Type: application/json
 |-------|------|----------|-------------|
 | topic | string | Yes | The topic title (max 500 chars) |
 | category | string | No | Category label (max 100 chars) |
-| priority | string | No | `low`, `medium`, or `high` (default: `medium`) |
 
 **Response:** Returns the created topic object with `id`.
 

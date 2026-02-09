@@ -13,7 +13,7 @@ const router = Router()
 router.get('/', async (_req: Request, res: Response) => {
   try {
     const result = await pool.query(`
-      SELECT id, topic, category, priority, status, created_at, updated_at, approved_at
+      SELECT id, topic, category, status, created_at, updated_at, approved_at
       FROM topics
       ORDER BY created_at DESC
     `)
@@ -47,17 +47,17 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST /api/topics - Create new topic (called by frontend or n8n)
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { topic, category, priority } = req.body
-    
+    const { topic, category } = req.body
+
     if (!topic || typeof topic !== 'string' || topic.trim() === '') {
       return res.status(400).json({ error: 'Topic is required' })
     }
-    
+
     const result = await pool.query(
-      `INSERT INTO topics (topic, category, priority)
-       VALUES ($1, $2, $3)
+      `INSERT INTO topics (topic, category)
+       VALUES ($1, $2)
        RETURNING *`,
-      [topic.trim(), category?.trim() || null, priority || 'medium']
+      [topic.trim(), category?.trim() || null]
     )
 
     res.status(201).json(result.rows[0])
@@ -196,7 +196,6 @@ router.post('/:id/add-to-customgpt', async (req: Request, res: Response) => {
         await generatePdf(pdfPath, {
           title: topic.topic,
           category: topic.category,
-          priority: topic.priority,
           approvedAt: topic.approved_at,
           markdown: topic.approved_content,
         })

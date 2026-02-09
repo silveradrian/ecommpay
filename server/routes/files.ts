@@ -160,7 +160,7 @@ router.post('/:id/generate-pdf', async (req: Request, res: Response) => {
 
     // Fetch topic from database
     const result = await pool.query(
-      `SELECT id, topic, category, priority, status, approved_content, approved_at
+      `SELECT id, topic, category, status, approved_content, approved_at
        FROM topics WHERE id = $1`,
       [id]
     )
@@ -186,7 +186,6 @@ router.post('/:id/generate-pdf', async (req: Request, res: Response) => {
     await generatePdf(pdfPath, {
       title: topic.topic,
       category: topic.category,
-      priority: topic.priority,
       approvedAt: topic.approved_at,
       markdown: topic.approved_content,
     })

@@ -6,7 +6,6 @@ import styles from './TopicIntake.module.css'
 interface TopicFormData {
   topic: string
   category: string
-  priority: 'low' | 'medium' | 'high'
 }
 
 function TopicIntake() {
@@ -16,7 +15,6 @@ function TopicIntake() {
   const [formData, setFormData] = useState<TopicFormData>({
     topic: '',
     category: '',
-    priority: 'medium',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,7 +29,6 @@ function TopicIntake() {
       await createTopic({
         topic: formData.topic.trim(),
         category: formData.category.trim() || undefined,
-        priority: formData.priority,
       })
 
       // Navigate to dashboard after successful submission
@@ -84,23 +81,7 @@ function TopicIntake() {
           />
         </div>
 
-        <div className={styles.field}>
-          <label htmlFor="priority" className={styles.label}>
-            Priority
-          </label>
-          <select
-            id="priority"
-            value={formData.priority}
-            onChange={(e) => setFormData({ ...formData, priority: e.target.value as 'low' | 'medium' | 'high' })}
-            className={styles.select}
-          >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-          </select>
-        </div>
-
-        <button 
+        <button
           type="submit" 
           className={styles.submitButton}
           disabled={isSubmitting || !formData.topic.trim()}

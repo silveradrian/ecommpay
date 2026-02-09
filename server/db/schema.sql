@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS topics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     topic VARCHAR(500) NOT NULL,
     category VARCHAR(100),
-    priority VARCHAR(20) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
     status VARCHAR(50) DEFAULT 'Queued' CHECK (status IN ('Queued', 'In Progress', 'In Review', 'Approved', 'Rejected')),
     approved_content TEXT,
     md_file_path VARCHAR(500),
