@@ -35,18 +35,28 @@ function TopicDashboard() {
 
   useEffect(() => {
     loadTopics()
+
+    // Auto-refresh every 15 seconds so statuses stay current
+    const interval = setInterval(() => {
+      loadTopics(false)
+    }, 15000)
+
+    return () => clearInterval(interval)
   }, [])
 
-  async function loadTopics() {
+  async function loadTopics(showLoading = true) {
     try {
-      setLoading(true)
+      if (showLoading) setLoading(true)
       setError(null)
       const data = await fetchTopics()
       setTopics(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load topics')
+      // Only show error on initial load, not background refreshes
+      if (showLoading) {
+        setError(err instanceof Error ? err.message : 'Failed to load topics')
+      }
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
   }
 
