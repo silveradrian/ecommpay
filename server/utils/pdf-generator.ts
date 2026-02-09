@@ -468,9 +468,12 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
       doc.addPage()
       drawPageHeader(doc)
       const tocPageIndex = doc.bufferedPageRange().count - 1
-      doc.y = PAGE.marginTop + 10
 
       // === BODY CONTENT ===
+      // Start body on a NEW page so the TOC page stays blank for later rendering.
+      doc.addPage()
+      drawPageHeader(doc)
+      doc.y = PAGE.marginTop + 10
       let lastType: string = ''
 
       for (const line of lines) {
