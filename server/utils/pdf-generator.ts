@@ -502,7 +502,6 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
 
         switch (line.type) {
           case 'h1':
-            tocEntries.push({ text: stripInlineMarkdown(line.text), level: 1, page: doc.bufferedPageRange().count })
             doc.moveDown(0.5)
             doc.font(fontHeading(fontsLoaded)).fontSize(22).fillColor(COLORS.ecommpayPurple)
             doc.text(stripInlineMarkdown(line.text), PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
@@ -626,13 +625,14 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
       drawGradientBar(doc, PAGE.marginLeft, doc.y + 2, 60, 2)
       doc.moveDown(1)
 
-      // TOC entries
+      // TOC entries — H2 is the top level, H3 is indented beneath it
       for (const entry of tocEntries) {
-        const indent = (entry.level - 1) * 20
+        const isTopLevel = entry.level === 2
+        const indent = isTopLevel ? 0 : 20
         const entryX = PAGE.marginLeft + indent
         const entryWidth = PAGE.contentWidth - indent - 40
-        const fontSize = entry.level === 1 ? 11 : entry.level === 2 ? 10 : 9
-        const fontFn = entry.level === 1 ? fontSubheading : fontBody
+        const fontSize = isTopLevel ? 11 : 9.5
+        const fontFn = isTopLevel ? fontSubheading : fontBody
 
         doc.font(fontFn(fontsLoaded)).fontSize(fontSize).fillColor(COLORS.darkGray)
         doc.text(entry.text, entryX, undefined, { width: entryWidth, continued: false })
@@ -646,7 +646,7 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
           lineBreak: false,
         })
 
-        doc.moveDown(entry.level === 1 ? 0.3 : 0.15)
+        doc.moveDown(isTopLevel ? 0.3 : 0.15)
       }
 
       ;(doc.page as any).margins.bottom = savedTocMargin
