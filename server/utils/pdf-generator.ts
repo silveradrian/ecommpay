@@ -180,19 +180,11 @@ function parseMarkdownLines(markdown: string): ParsedLine[] {
 function registerFonts(doc: PDFKit.PDFDocument): boolean {
   let fontsLoaded = false
   try {
-    const poppinsBold = resolveAsset('fonts/Poppins-Bold.ttf')
-    const poppinsSemiBold = resolveAsset('fonts/Poppins-SemiBold.ttf')
-    const poppinsRegular = resolveAsset('fonts/Poppins-Regular.ttf')
+    const sohneKraftig = resolveAsset('fonts/SohneBreit-Kraftig.ttf')
     const interRegular = resolveAsset('fonts/Inter-Regular.ttf')
 
-    if (fs.existsSync(poppinsBold)) {
-      doc.registerFont('Poppins-Bold', poppinsBold)
-    }
-    if (fs.existsSync(poppinsSemiBold)) {
-      doc.registerFont('Poppins-SemiBold', poppinsSemiBold)
-    }
-    if (fs.existsSync(poppinsRegular)) {
-      doc.registerFont('Poppins-Regular', poppinsRegular)
+    if (fs.existsSync(sohneKraftig)) {
+      doc.registerFont('SohneBreit-Kraftig', sohneKraftig)
     }
     if (fs.existsSync(interRegular)) {
       doc.registerFont('Inter', interRegular)
@@ -205,11 +197,12 @@ function registerFonts(doc: PDFKit.PDFDocument): boolean {
 }
 
 // Font helpers with fallback
+// Ecommpay brand: Söhne Breit Kräftig for headings, Inter for body
 function fontHeading(fontsLoaded: boolean): string {
-  return fontsLoaded ? 'Poppins-Bold' : 'Helvetica-Bold'
+  return fontsLoaded ? 'SohneBreit-Kraftig' : 'Helvetica-Bold'
 }
 function fontSubheading(fontsLoaded: boolean): string {
-  return fontsLoaded ? 'Poppins-SemiBold' : 'Helvetica-Bold'
+  return fontsLoaded ? 'SohneBreit-Kraftig' : 'Helvetica-Bold'
 }
 function fontBody(fontsLoaded: boolean): string {
   return fontsLoaded ? 'Inter' : 'Helvetica'
