@@ -26,14 +26,16 @@ function resolvePublicAsset(relativePath: string): string {
   return devPath // return dev path even if missing, let caller handle error
 }
 
-// Savi Design System colors
+// Ecommpay Brand Colors
 const COLORS = {
-  deepForestGreen: '#0F2B1D',
-  warmOrange: '#FF6A00',
-  magenta: '#C137A2',
-  accentPurple: '#A020F0',
+  ecommpayPurple: '#4B007C',    // Primary brand color
+  newWorldPurple: '#AD00FD',    // Vibrant accent
+  ecommpayLilac: '#AE91FF',     // Secondary accent
+  highEndOrange: '#FF5F00',     // Accent / CTA
+  financialGreen: '#102E19',    // Trust / stability
+  ecommpayBlack: '#060316',     // Primary text
+  beige: '#F8F4F2',             // Light background
   white: '#FFFFFF',
-  black: '#000000',
   lightGray: '#F5F5F5',
   mediumGray: '#666666',
   darkGray: '#333333',
@@ -213,41 +215,42 @@ function fontBody(fontsLoaded: boolean): string {
   return fontsLoaded ? 'Inter' : 'Helvetica'
 }
 
-// Draw gradient accent bar
+// Draw gradient accent bar (Ecommpay Purple → New World Purple)
 function drawGradientBar(doc: PDFKit.PDFDocument, x: number, y: number, width: number, height: number) {
   const grad = doc.linearGradient(x, y, x + width, y)
-  grad.stop(0, COLORS.warmOrange)
-  grad.stop(1, COLORS.magenta)
+  grad.stop(0, COLORS.ecommpayPurple)
+  grad.stop(1, COLORS.newWorldPurple)
   doc.rect(x, y, width, height).fill(grad)
 }
 
 // Draw page header with logos
+// Ecommpay is the primary brand (left); Savi is shown as a sub-brand (right, smaller)
 function drawPageHeader(doc: PDFKit.PDFDocument) {
-  const saviLogoPath = resolvePublicAsset('img/Savi_logo_Savi_Colour reversed.png')
   const ecommpayLogoPath = resolvePublicAsset('img/ecommpaylogo.png')
+  const saviLogoPath = resolvePublicAsset('img/Savi_logo_Savi_White out copy.png')
 
-  // Light header background
-  doc.rect(0, 0, PAGE.width, 55).fill(COLORS.deepForestGreen)
+  // Ecommpay Purple header background
+  doc.rect(0, 0, PAGE.width, 55).fill(COLORS.ecommpayPurple)
 
-  // Savi logo (left)
-  try {
-    if (fs.existsSync(saviLogoPath)) {
-      doc.image(saviLogoPath, PAGE.marginLeft, 12, { height: 30 })
-    }
-  } catch (err) {
-    console.warn('Could not load Savi logo:', err)
-  }
-
-  // ecommpay logo (right)
+  // Ecommpay logo — primary brand, left
   try {
     if (fs.existsSync(ecommpayLogoPath)) {
-      doc.image(ecommpayLogoPath, PAGE.width - PAGE.marginRight - 100, 12, { height: 30 })
+      doc.image(ecommpayLogoPath, PAGE.marginLeft, 12, { height: 30 })
     }
   } catch (err) {
     console.warn('Could not load ecommpay logo:', err)
   }
 
-  // Gradient accent line below header
+  // Savi logo — sub-brand, right and slightly smaller
+  try {
+    if (fs.existsSync(saviLogoPath)) {
+      doc.image(saviLogoPath, PAGE.width - PAGE.marginRight - 70, 17, { height: 22 })
+    }
+  } catch (err) {
+    console.warn('Could not load Savi logo:', err)
+  }
+
+  // Purple gradient accent line below header
   drawGradientBar(doc, 0, 55, PAGE.width, 3)
 }
 
@@ -319,9 +322,9 @@ function drawTable(
   const cellPadding = 6
   const fontSize = 9
   const rowHeight = 22
-  const headerBg = COLORS.deepForestGreen
+  const headerBg = COLORS.ecommpayPurple
   const headerText = COLORS.white
-  const altRowBg = '#F8F8F8'
+  const altRowBg = COLORS.beige
   const borderColor = '#E0E0E0'
   const startX = PAGE.marginLeft
 
@@ -433,7 +436,7 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
 
       // Subtitle label — positioned above the title
       const subtitleY = 200
-      doc.font(fontSubheading(fontsLoaded)).fontSize(11).fillColor(COLORS.warmOrange)
+      doc.font(fontSubheading(fontsLoaded)).fontSize(11).fillColor(COLORS.highEndOrange)
       doc.text('KNOWLEDGE BASE ARTICLE', PAGE.marginLeft, subtitleY, {
         width: PAGE.contentWidth,
         characterSpacing: 2,
@@ -441,7 +444,7 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
 
       // Title — large, positioned in the upper-third of the page
       doc.moveDown(0.6)
-      doc.font(fontHeading(fontsLoaded)).fontSize(38).fillColor(COLORS.deepForestGreen)
+      doc.font(fontHeading(fontsLoaded)).fontSize(38).fillColor(COLORS.ecommpayPurple)
       doc.text(options.title, PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
 
       // Wide gradient bar under title
@@ -459,7 +462,7 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
       if (options.category) {
         doc.font(fontSubheading(fontsLoaded)).fontSize(10).fillColor(COLORS.mediumGray)
         doc.text('Category', PAGE.marginLeft, metaY + 16, { width: PAGE.contentWidth })
-        doc.font(fontHeading(fontsLoaded)).fontSize(14).fillColor(COLORS.deepForestGreen)
+        doc.font(fontHeading(fontsLoaded)).fontSize(14).fillColor(COLORS.ecommpayPurple)
         doc.text(options.category, PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
       }
 
@@ -470,7 +473,7 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
         const dateY = options.category ? metaY + 60 : metaY + 16
         doc.font(fontSubheading(fontsLoaded)).fontSize(10).fillColor(COLORS.mediumGray)
         doc.text('Approved', PAGE.marginLeft, dateY, { width: PAGE.contentWidth })
-        doc.font(fontHeading(fontsLoaded)).fontSize(14).fillColor(COLORS.deepForestGreen)
+        doc.font(fontHeading(fontsLoaded)).fontSize(14).fillColor(COLORS.ecommpayPurple)
         doc.text(dateStr, PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
       }
 
@@ -508,7 +511,7 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
           case 'h1':
             tocEntries.push({ text: stripInlineMarkdown(line.text), level: 1, page: doc.bufferedPageRange().count })
             doc.moveDown(0.5)
-            doc.font(fontHeading(fontsLoaded)).fontSize(22).fillColor(COLORS.deepForestGreen)
+            doc.font(fontHeading(fontsLoaded)).fontSize(22).fillColor(COLORS.ecommpayPurple)
             doc.text(stripInlineMarkdown(line.text), PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
             drawGradientBar(doc, PAGE.marginLeft, doc.y + 2, 60, 2)
             doc.moveDown(0.6)
@@ -517,7 +520,7 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
           case 'h2':
             tocEntries.push({ text: stripInlineMarkdown(line.text), level: 2, page: doc.bufferedPageRange().count })
             if (lastType !== 'blank') doc.moveDown(0.8)
-            doc.font(fontHeading(fontsLoaded)).fontSize(17).fillColor(COLORS.deepForestGreen)
+            doc.font(fontHeading(fontsLoaded)).fontSize(17).fillColor(COLORS.ecommpayPurple)
             doc.text(stripInlineMarkdown(line.text), PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
             drawGradientBar(doc, PAGE.marginLeft, doc.y + 2, 50, 2)
             doc.moveDown(0.5)
@@ -525,14 +528,14 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
 
           case 'h3':
             if (lastType !== 'blank') doc.moveDown(0.5)
-            doc.font(fontSubheading(fontsLoaded)).fontSize(13.5).fillColor(COLORS.deepForestGreen)
+            doc.font(fontSubheading(fontsLoaded)).fontSize(13.5).fillColor(COLORS.ecommpayPurple)
             doc.text(stripInlineMarkdown(line.text), PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
             doc.moveDown(0.3)
             break
 
           case 'h4':
             if (lastType !== 'blank') doc.moveDown(0.3)
-            doc.font(fontSubheading(fontsLoaded)).fontSize(11.5).fillColor(COLORS.darkGray)
+            doc.font(fontSubheading(fontsLoaded)).fontSize(11.5).fillColor(COLORS.ecommpayLilac)
             doc.text(stripInlineMarkdown(line.text), PAGE.marginLeft, undefined, { width: PAGE.contentWidth })
             doc.moveDown(0.2)
             break
@@ -555,7 +558,7 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
             const textWidth = PAGE.contentWidth - 22 - indent
 
             // Draw bullet dot
-            doc.circle(bulletX + 2, doc.y + 5, 2).fill(COLORS.magenta)
+            doc.circle(bulletX + 2, doc.y + 5, 2).fill(COLORS.newWorldPurple)
             writeRichText(doc, line.text, textX, textWidth, fontsLoaded)
             doc.moveDown(0.15)
             break
@@ -598,7 +601,7 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
             const bqTextX = PAGE.marginLeft + 16
             const bqWidth = PAGE.contentWidth - 20
             // Draw left accent bar
-            doc.rect(bqX, doc.y - 1, 3, 14).fill(COLORS.warmOrange)
+            doc.rect(bqX, doc.y - 1, 3, 14).fill(COLORS.highEndOrange)
             // Draw blockquote text in italic style
             doc.font(fontBody(fontsLoaded)).fontSize(10.5).fillColor(COLORS.mediumGray)
             doc.text(stripInlineMarkdown(line.text), bqTextX, undefined, { width: bqWidth, lineGap: 3 })
@@ -625,7 +628,7 @@ export async function generatePdf(outputPath: string, options: PdfOptions): Prom
       doc.y = PAGE.marginTop + 10
 
       // TOC title
-      doc.font(fontHeading(fontsLoaded)).fontSize(20).fillColor(COLORS.deepForestGreen)
+      doc.font(fontHeading(fontsLoaded)).fontSize(20).fillColor(COLORS.ecommpayPurple)
       doc.text('Table of Contents', PAGE.marginLeft, doc.y, { width: PAGE.contentWidth })
       drawGradientBar(doc, PAGE.marginLeft, doc.y + 2, 60, 2)
       doc.moveDown(1)
