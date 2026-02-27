@@ -219,7 +219,7 @@ function drawGradientBar(doc: PDFKit.PDFDocument, x: number, y: number, width: n
 // Draw page header with logos
 // Ecommpay is the primary brand (left); Savi is shown as a sub-brand (right, smaller)
 function drawPageHeader(doc: PDFKit.PDFDocument) {
-  const ecommpayLogoPath = resolvePublicAsset('img/ecommpaylogo.png')
+  const ecommpayLogoPath = resolvePublicAsset('img/ecommpay_white.png')
   const saviLogoPath = resolvePublicAsset('img/Savi_logo_Savi_White out copy.png')
 
   // Ecommpay Purple header background
