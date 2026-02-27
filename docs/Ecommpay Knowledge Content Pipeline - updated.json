@@ -219,12 +219,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "url": "https://api.perplexity.ai/chat/completions",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBearerAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\"model\": \"perplexity/sonar-pro-search\", \"messages\": [{\"role\": \"system\", \"content\": $json.edited_prompt || $('Fetch System Prompt').first().json.value}, {\"role\": \"user\", \"content\": $json.prompt}], \"temperature\": 0.3, \"max_tokens\": 4000}) }}",
+        "jsonBody": "={{ JSON.stringify({\"model\": \"sonar-pro\", \"messages\": [{\"role\": \"system\", \"content\": $json.edited_prompt || $('Fetch System Prompt').first().json.value}, {\"role\": \"user\", \"content\": $json.prompt}], \"temperature\": 0.3, \"max_tokens\": 4000}) }}",
         "options": {}
       },
       "id": "9b0ceba4-3beb-4751-b668-246e0f59e36d",
@@ -238,7 +238,7 @@
       "credentials": {
         "httpBearerAuth": {
           "id": "CoyAeThU0Qk6vdUD",
-          "name": "openrouter"
+          "name": "perplexity"
         }
       }
     },
