@@ -93,22 +93,44 @@ function isTableSeparator(line: string): boolean {
 function parseMarkdownLines(markdown: string): ParsedLine[] {
   const lines = markdown.split('\n')
   const parsed: ParsedLine[] = []
-  let inCodeBlock = false
   let i = 0
 
   while (i < lines.length) {
     const line = lines[i]
     const trimmed = line.trim()
 
+    // Collect the entire code block, then decide how to render it
     if (trimmed.startsWith('```')) {
-      inCodeBlock = !inCodeBlock
-      i++
-      continue
-    }
+      i++ // skip opening fence
+      const codeLines: string[] = []
+      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+        codeLines.push(lines[i])
+        i++
+      }
+      i++ // skip closing fence
 
-    if (inCodeBlock) {
-      parsed.push({ type: 'code', text: line })
-      i++
+      // If the block is JSON with a "content" key, render its value as markdown text
+      const rawBlock = codeLines.join('\n').trim()
+      let handledAsContent = false
+      if (rawBlock.startsWith('{')) {
+        try {
+          const parsed_json = JSON.parse(rawBlock)
+          if (typeof parsed_json.content === 'string') {
+            // Split on paragraph breaks and feed back through normal parsing
+            const innerLines = parseMarkdownLines(parsed_json.content)
+            parsed.push(...innerLines)
+            handledAsContent = true
+          }
+        } catch {
+          // Not valid JSON — fall through to render as code
+        }
+      }
+
+      if (!handledAsContent) {
+        for (const codeLine of codeLines) {
+          parsed.push({ type: 'code', text: codeLine })
+        }
+      }
       continue
     }
 
