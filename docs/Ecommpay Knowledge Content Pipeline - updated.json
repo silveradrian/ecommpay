@@ -647,7 +647,7 @@
             },
             {
               "name": "gotohuman_review_url",
-              "value": "={{ $json.extReviewerLinks[0] }}"
+              "value": "={{ $json.extReviewerLinks[0].link }}"
             }
           ]
         },
