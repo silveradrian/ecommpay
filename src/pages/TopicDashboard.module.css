@@ -113,6 +113,18 @@
   color: var(--color-gradient-start);
 }
 
+.reviewLink {
+  color: var(--color-status-in-review);
+  font-weight: 500;
+  font-size: var(--text-small);
+  transition: opacity var(--transition-fast);
+  white-space: nowrap;
+}
+
+.reviewLink:hover {
+  opacity: 0.75;
+}
+
 .deleteButton {
   background: none;
   border: 1px solid rgba(239, 68, 68, 0.3);

@@ -118,6 +118,16 @@ function TopicDashboard() {
                         View Content
                       </Link>
                     )}
+                    {topic.status === 'In Review' && topic.gotohuman_review_url && (
+                      <a
+                        href={topic.gotohuman_review_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.reviewLink}
+                      >
+                        Review →
+                      </a>
+                    )}
                     {confirmDeleteId === topic.id ? (
                       <span className={styles.confirmDelete}>
                         <span className={styles.confirmText}>Delete?</span>

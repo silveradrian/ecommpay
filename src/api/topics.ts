@@ -12,6 +12,7 @@ export interface Topic {
   pdf_file_path: string | null
   customgpt_source_id: string | null
   customgpt_added_at: string | null
+  gotohuman_review_url: string | null
   created_at: string
   updated_at: string
   approved_at: string | null

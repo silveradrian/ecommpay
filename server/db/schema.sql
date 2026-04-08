@@ -32,6 +32,9 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'topics' AND column_name = 'customgpt_added_at') THEN
         ALTER TABLE topics ADD COLUMN customgpt_added_at TIMESTAMP WITH TIME ZONE;
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'topics' AND column_name = 'gotohuman_review_url') THEN
+        ALTER TABLE topics ADD COLUMN gotohuman_review_url VARCHAR(500);
+    END IF;
 END $$;
 
 -- Settings table (key-value store for app configuration)

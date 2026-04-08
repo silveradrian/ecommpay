@@ -13,7 +13,7 @@ const router = Router()
 router.get('/', async (_req: Request, res: Response) => {
   try {
     const result = await pool.query(`
-      SELECT id, topic, category, status, created_at, updated_at, approved_at
+      SELECT id, topic, category, status, created_at, updated_at, approved_at, gotohuman_review_url
       FROM topics
       ORDER BY created_at DESC
     `)
@@ -83,7 +83,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.patch('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params
-    const { status, approved_content, customgpt_source_id, customgpt_added_at } = req.body
+    const { status, approved_content, customgpt_source_id, customgpt_added_at, gotohuman_review_url } = req.body
     
     // Build dynamic update query
     const updates: string[] = []
@@ -113,7 +113,12 @@ router.patch('/:id', async (req: Request, res: Response) => {
       updates.push(`customgpt_added_at = $${paramCount++}`)
       values.push(customgpt_added_at)
     }
-    
+
+    if (gotohuman_review_url !== undefined) {
+      updates.push(`gotohuman_review_url = $${paramCount++}`)
+      values.push(gotohuman_review_url)
+    }
+
     if (updates.length === 0) {
       return res.status(400).json({ error: 'No valid fields to update' })
     }
